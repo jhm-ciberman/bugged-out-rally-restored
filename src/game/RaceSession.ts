@@ -73,7 +73,7 @@ export class RaceSession implements IUpdatable {
         this.pickups = new Pickups(track.items);
         this.zones = new Zones(track);
         this.combat = combat;
-        this.hazards = new Hazards(track, combat, combat.audio);
+        this.hazards = new Hazards(track, combat, combat.models, combat.audio);
         combat.onDamage = ({ target, source, amount }) => target.applyDamage(amount, { kind: 'projectile', source });
         this.player = player;
         this.cars.push(player);
@@ -111,6 +111,8 @@ export class RaceSession implements IUpdatable {
             session.cars.push(car);
             session.bots.push(bot);
         });
+        // Cars are solid to each other. A wrecked car leaves the list until it comes back.
+        for (const car of session.cars) track.collision.obstacles.push(car.obstacle);
         return session;
     }
 
@@ -127,6 +129,7 @@ export class RaceSession implements IUpdatable {
         const alpha = this._accumulator / TICK_SECONDS;
         for (const car of this.cars) car.draw(alpha, deltaSeconds);
         this.combat.update(deltaSeconds);
+        this.hazards.update();
         this._chase.update(this.player.vehicle, this.player.renderPosition, this.player.renderRotation);
     }
 
@@ -156,6 +159,7 @@ export class RaceSession implements IUpdatable {
         car.bombs = 0;
         car.boosting = false;
         car.view.object.visible = false;
+        car.obstacle.enabled = false;
     }
 
     /**
@@ -171,6 +175,8 @@ export class RaceSession implements IUpdatable {
     }
 
     dispose(): void {
+        const obstacles = this.track.collision.obstacles;
+        for (const car of this.cars) obstacles.splice(obstacles.indexOf(car.obstacle), 1);
         this._input.dispose();
         this.combat.dispose();
         for (const car of this.cars) car.dispose();
@@ -183,6 +189,7 @@ export class RaceSession implements IUpdatable {
         car.damage = 0;
         this._placeAtCheckpoint(car);
         car.view.object.visible = true;
+        car.obstacle.enabled = true;
         this.bots.find((b) => b.car === car)?.respawned();
     }
 

@@ -24,6 +24,82 @@ export interface Contact {
     readonly distance: number;
 }
 
+/**
+ * A moving solid that other bodies collide with as if it were fixed for the instant of contact,
+ * like Torque vehicles treat each other.
+ */
+export interface Obstacle {
+    /** The object this obstacle belongs to; it never collides with itself. */
+    readonly owner: unknown;
+    /** Whether the obstacle is solid right now. */
+    enabled: boolean;
+    /** Adds a contact to `out` when `point` is within `tolerance` of the obstacle or inside it. */
+    contact(point: THREE.Vector3, tolerance: number, out: Contact[]): void;
+}
+
+/**
+ * A ball-shaped obstacle.
+ */
+export class SphereObstacle implements Obstacle {
+    readonly center = new THREE.Vector3();
+    enabled = true;
+
+    constructor(
+        readonly owner: unknown,
+        public radius: number,
+    ) {}
+
+    contact(point: THREE.Vector3, tolerance: number, out: Contact[]): void {
+        const offset = point.clone().sub(this.center);
+        const length = offset.length();
+        const distance = length - this.radius;
+        if (distance >= tolerance || length < 1e-6) return;
+        out.push({ point: point.clone(), normal: offset.divideScalar(length), distance });
+    }
+}
+
+/**
+ * A box-shaped obstacle that follows a body: `box` in body space, placed by `position` and `rotation`.
+ */
+export class BoxObstacle implements Obstacle {
+    readonly position = new THREE.Vector3();
+    enabled = true;
+    readonly rotation = new THREE.Quaternion();
+
+    constructor(
+        readonly owner: unknown,
+        readonly box: THREE.Box3,
+    ) {}
+
+    contact(point: THREE.Vector3, tolerance: number, out: Contact[]): void {
+        const inv = this.rotation.clone().invert();
+        const local = point.clone().sub(this.position).applyQuaternion(inv);
+        const b = this.box;
+        if (
+            local.x < b.min.x - tolerance ||
+            local.x > b.max.x + tolerance ||
+            local.y < b.min.y - tolerance ||
+            local.y > b.max.y + tolerance ||
+            local.z < b.min.z - tolerance ||
+            local.z > b.max.z + tolerance
+        ) {
+            return;
+        }
+        // Push out through the nearest face.
+        const faces: [number, THREE.Vector3][] = [
+            [local.x - b.max.x, new THREE.Vector3(1, 0, 0)],
+            [b.min.x - local.x, new THREE.Vector3(-1, 0, 0)],
+            [local.y - b.max.y, new THREE.Vector3(0, 1, 0)],
+            [b.min.y - local.y, new THREE.Vector3(0, -1, 0)],
+            [local.z - b.max.z, new THREE.Vector3(0, 0, 1)],
+            [b.min.z - local.z, new THREE.Vector3(0, 0, -1)],
+        ];
+        let best = faces[0];
+        for (const f of faces) if (f[0] > best[0]) best = f;
+        out.push({ point: point.clone(), normal: best[1].applyQuaternion(this.rotation), distance: best[0] });
+    }
+}
+
 const TERRAIN_RAY_STEP = 0.5;
 const _n = new THREE.Vector3();
 const _p = new THREE.Vector3();
@@ -37,6 +113,8 @@ export class CollisionWorld {
     private readonly _bvh: MeshBVH | null;
     private readonly _mesh: THREE.Mesh | null;
     private readonly _raycaster = new THREE.Raycaster();
+    /** Moving solids (cars, boulders), refreshed by their owners every tick. */
+    readonly obstacles: Obstacle[] = [];
 
     /**
      * @param terrain The track terrain.
@@ -101,7 +179,18 @@ export class CollisionWorld {
      * @param points World positions of a body's collision hull.
      * @param center A point inside the body, used to tell the outside of thin surfaces.
      */
-    findContacts(points: readonly THREE.Vector3[], center: THREE.Vector3, tolerance: number, out: Contact[]): void {
+    findContacts(
+        points: readonly THREE.Vector3[],
+        center: THREE.Vector3,
+        tolerance: number,
+        out: Contact[],
+        self: unknown = null,
+    ): void {
+        for (const obstacle of this.obstacles) {
+            if (!obstacle.enabled || obstacle.owner === self) continue;
+            for (const p of points) obstacle.contact(p, tolerance, out);
+        }
+
         for (const p of points) {
             const h = this.terrain.heightAt(p.x, p.y);
             if (p.z - h < tolerance + 1) {

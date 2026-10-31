@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { ModelLibrary } from '../assets/ModelLibrary';
 import type { AudioSystem } from '../audio/AudioSystem';
+import { BoxObstacle } from '../physics/CollisionWorld';
 import { getVehicleData } from '../vehicle/VehicleData';
 import { VehicleSounds } from '../vehicle/VehicleSounds';
 import { VehicleView } from '../vehicle/VehicleView';
@@ -51,11 +52,16 @@ export class Car {
     /** Seconds left before a wrecked car comes back, or 0 while driving. */
     respawnTimer = 0;
 
+    /** The car's body as a solid for other cars and rolling objects. */
+    readonly obstacle: BoxObstacle;
+
     private constructor(
         readonly vehicle: WheeledVehicle,
         readonly view: VehicleView,
     ) {
         vehicle.onImpact = (change) => this._impact(change.length());
+        const hull = new THREE.Box3().setFromPoints([...vehicle.data.collisionHull]);
+        this.obstacle = new BoxObstacle(vehicle, hull);
     }
 
     /**
@@ -85,6 +91,8 @@ export class Car {
         this._prevRotation.copy(rotation);
         this.renderPosition.copy(position);
         this.renderRotation.copy(rotation);
+        this.obstacle?.position.copy(position);
+        this.obstacle?.rotation.copy(rotation);
     }
 
     /**
@@ -98,6 +106,8 @@ export class Car {
             if (this.vehicle.energy <= 0) this.boosting = false;
         }
         this.vehicle.tick(move);
+        this.obstacle.position.copy(this.vehicle.rigid.linPosition);
+        this.obstacle.rotation.copy(this.vehicle.rigid.angPosition);
     }
 
     /**

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { CollisionWorld, Contact } from '../physics/CollisionWorld';
 import { Rigid } from '../physics/Rigid';
+import { resolveCollisions, resolveContacts } from '../physics/RigidCollision';
 import type { VehicleData, WheelMount } from './VehicleData';
 
 /** Length of one simulation tick, in seconds (`TickSec`, 32 ms). */
@@ -14,8 +15,6 @@ const REST_TOLERANCE = 0.5;
 const REST_COUNT = 10;
 /** Steering kept on a tick without steering input (`Vehicle::updateMove` in the exe, 0x4bd46d). */
 const STEERING_RETURN = 0.9;
-/** Most impulse passes per sub-step, a safety net for the engine's open-ended loop. */
-const MAX_COLLISION_PASSES = 16;
 
 /**
  * The controls applied during one tick (Torque's `Move`).
@@ -400,65 +399,9 @@ export class WheeledVehicle {
             this._hullWorld[i].copy(this.data.collisionHull[i]).applyQuaternion(r.angPosition).add(r.linPosition);
         }
         this._contacts.length = 0;
-        this._world.findContacts(this._hullWorld, r.worldCenterOfMass, this.data.collisionTol, this._contacts);
-        const collided = this._resolveCollision();
-        this._resolveContacts(dt);
+        this._world.findContacts(this._hullWorld, r.worldCenterOfMass, this.data.collisionTol, this._contacts, this);
+        const collided = resolveCollisions(r, this._contacts, this.data.collisionTol, this.data.contactTol);
+        resolveContacts(r, this._contacts, this.data.collisionTol, this.data.contactTol, dt);
         return collided;
-    }
-
-    private _resolveCollision(): boolean {
-        const r = this.rigid;
-        const tol = this.data.collisionTol;
-        let collided = false;
-        for (let pass = 0; pass < MAX_COLLISION_PASSES; pass++) {
-            let colliding = false;
-            for (const c of this._contacts) {
-                if (c.distance >= tol) continue;
-                r.getOriginVector(c.point, _r);
-                r.getVelocity(_r, _v);
-                if (_v.dot(c.normal) < -this.data.contactTol) {
-                    r.resolveCollision(c.point, c.normal);
-                    colliding = collided = true;
-                }
-            }
-            if (!colliding) break;
-        }
-        return collided;
-    }
-
-    private _resolveContacts(dt: number): void {
-        const r = this.rigid;
-        const tol = this.data.collisionTol;
-        const contactTol = this.data.contactTol;
-        const p = new THREE.Vector3();
-        const l = new THREE.Vector3();
-        for (const c of this._contacts) {
-            if (c.distance >= tol) continue;
-            r.getOriginVector(c.point, _r);
-            r.getVelocity(_r, _v);
-            const vn = _v.dot(c.normal);
-            if (Math.abs(vn) >= contactTol) continue;
-
-            // Penetration spring that pushes the body out of the surface.
-            const zi = 2 * Math.abs(r.getZeroImpulse(_r, c.normal));
-            let s = (tol - c.distance) * zi - (vn / contactTol) * zi;
-            _f.copy(c.normal).multiplyScalar(s);
-
-            // Friction, up to what it takes to stop the sliding motion.
-            const uv = _v.addScaledVector(c.normal, -vn);
-            const ul = uv.length();
-            if (s > 0 && ul) {
-                uv.divideScalar(-ul);
-                let u = ul * r.getZeroImpulse(_r, uv);
-                s *= r.friction;
-                if (u > s) u = s;
-                _f.addScaledVector(uv, u);
-            }
-            p.add(_f);
-            l.add(_t.crossVectors(_r, _f));
-        }
-        r.linMomentum.addScaledVector(p, dt);
-        r.angMomentum.addScaledVector(l, dt);
-        r.updateVelocity();
     }
 }

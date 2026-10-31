@@ -49,6 +49,11 @@ export class Combat {
     private readonly _armed = new Map<Car, Armed>();
     private readonly _flying: Flying[] = [];
 
+    /** The model loader projectiles use. */
+    get models(): ModelLibrary {
+        return this._models;
+    }
+
     /** The sound system projectiles play through, if any. */
     get audio(): AudioSystem | null {
         return this._audio;
