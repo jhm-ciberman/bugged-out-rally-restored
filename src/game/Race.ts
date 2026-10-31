@@ -6,6 +6,12 @@ import { TriggerVolume } from '../world/TriggerVolume';
 
 /** Laps in a race (`$Game::Laps`). */
 export const RACE_LAPS = 3;
+/** Seconds between position reports (`PlayerListGui::startTask`). */
+const REPORT_SECONDS = 0.1;
+/** Reports in a row going the wrong way before the warning (`getWrongWayCnt > 30`). */
+const WRONG_WAY_REPORTS = 30;
+/** Distance change, in meters, that counts as moving toward or away from the checkpoint. */
+const WRONG_WAY_MARGIN = 0.05;
 /** Delay before the countdown starts, in seconds (`$Game::WaitTime`). */
 const WAIT_SECONDS = 2;
 
@@ -34,6 +40,10 @@ export interface Racer {
     readonly lastCheckpoint: { position: THREE.Vector3; rotation: THREE.Quaternion };
     /** Called when the racer crosses its next checkpoint in order. */
     onCheckpoint: (() => void) | null;
+    /** 100 ms steps in a row spent moving away from the next checkpoint. */
+    wrongWay: number;
+    /** Distance to the next checkpoint at the last position report. */
+    lastDistance: number;
     /** Triggers the car is inside, to raise enter events once. */
     readonly inside: Set<TriggerVolume>;
 }
@@ -62,6 +72,7 @@ export class Race {
     /** Where the marker of each checkpoint floats, by checkpoint number (`checkpointmarkerN`). */
     readonly markers = new Map<number, THREE.Vector3>();
     private _phaseTime = 0;
+    private _reportTime = 0;
     private _count = 3;
 
     constructor(
@@ -134,6 +145,8 @@ export class Race {
                 rotation: vehicle.rigid.angPosition.clone(),
             },
             onCheckpoint: null,
+            wrongWay: 0,
+            lastDistance: Number.POSITIVE_INFINITY,
             inside: new Set(),
         };
         this.racers.push(racer);
@@ -169,6 +182,31 @@ export class Race {
         if (this.phase === 'racing' || this.phase === 'finished') this.time += dt;
 
         for (const racer of this.racers) this._checkTriggers(racer);
+
+        // Position reports every 100 ms (`PlayerListGui::startTask`).
+        this._reportTime += dt;
+        if (this._reportTime >= REPORT_SECONDS) {
+            this._reportTime -= REPORT_SECONDS;
+            if (this.phase === 'racing') for (const racer of this.racers) this._reportPosition(racer);
+        }
+    }
+
+    /**
+     * Counts reports spent driving away from the next checkpoint and warns past 30 (about 3 s).
+     * The counting is native in the original (`getWrongWayCnt`); "farther than last time" is a guess.
+     */
+    private _reportPosition(racer: Racer): void {
+        if (racer.finishTime !== null) return;
+        const target = this.nextCheckpointPosition(racer);
+        if (!target) return;
+        const distance = target.distanceTo(racer.vehicle.rigid.linPosition);
+        if (distance > racer.lastDistance + WRONG_WAY_MARGIN) racer.wrongWay++;
+        else if (distance < racer.lastDistance - WRONG_WAY_MARGIN) racer.wrongWay = 0;
+        racer.lastDistance = distance;
+        if (racer.wrongWay > WRONG_WAY_REPORTS) {
+            this.events.onCenterPrint?.(racer, 'Wrong Way!');
+            racer.wrongWay = 0;
+        }
     }
 
     private _checkTriggers(racer: Racer): void {
@@ -193,6 +231,9 @@ export class Race {
             racer.lastCheckpoint.position.copy(racer.vehicle.rigid.linPosition);
             racer.lastCheckpoint.rotation.copy(racer.vehicle.rigid.angPosition);
             racer.onCheckpoint?.();
+            // The target moves to the next checkpoint, which is usually farther away.
+            racer.lastDistance = Number.POSITIVE_INFINITY;
+            racer.wrongWay = 0;
             if (trigger.field('islast') === '1') {
                 racer.lap++;
                 racer.lapTimes.push(this.time);

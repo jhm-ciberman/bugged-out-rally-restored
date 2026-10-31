@@ -16,7 +16,7 @@ const _m = new THREE.Matrix4();
  */
 export class ChaseCamera {
     constructor(
-        private readonly _camera: THREE.PerspectiveCamera,
+        readonly camera: THREE.PerspectiveCamera,
         private readonly _world: CollisionWorld,
     ) {}
 
@@ -47,7 +47,7 @@ export class ChaseCamera {
 
         // three.js cameras look down -Z with +Y up.
         _m.makeBasis(_x, _z, _forward.clone().negate());
-        this._camera.quaternion.setFromRotationMatrix(_m);
-        this._camera.position.copy(_end);
+        this.camera.quaternion.setFromRotationMatrix(_m);
+        this.camera.position.copy(_end);
     }
 }

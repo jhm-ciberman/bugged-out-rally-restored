@@ -138,9 +138,10 @@ export class RaceSession implements IUpdatable {
             car.draw(alpha, deltaSeconds);
             this._emitDust(car, deltaSeconds);
         }
-        this.combat.update(deltaSeconds);
+        this.combat.update(deltaSeconds, alpha);
         this.hazards.update();
         this._chase.update(this.player.vehicle, this.player.renderPosition, this.player.renderRotation);
+        this._chase.camera.position.add(this.combat.cameraShake(this._chase.camera.position));
     }
 
     /**

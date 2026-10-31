@@ -13,9 +13,11 @@ interface DescriptionJson {
     isLooping?: number;
     is3D?: number;
     referenceDistance?: number;
-    maxDistance?: number;
     type?: string | number;
 }
+
+/** A max distance far beyond any track, so distance falloff never stops. */
+const UNCLAMPED_DISTANCE = 1e6;
 
 /** Key that toggles mute. */
 const MUTE_KEY = 'KeyM';
@@ -173,10 +175,11 @@ export class AudioSystem {
     private _positional(profile: string): THREE.PositionalAudio {
         const d = this._description(profile);
         const sound = new THREE.PositionalAudio(this.listener);
-        // OpenAL inverse distance, clamped between the reference and max distance.
+        // Torque uses OpenAL's unclamped inverse distance model (`AL_INVERSE_DISTANCE`), so the volume keeps
+        // falling past the description's max distance. Web Audio stops falling at maxDistance, so push it away.
         sound.setDistanceModel('inverse');
         sound.setRefDistance(d.referenceDistance);
-        sound.setMaxDistance(d.maxDistance);
+        sound.setMaxDistance(UNCLAMPED_DISTANCE);
         sound.setRolloffFactor(1);
         this._route(sound, profile);
         return sound;
@@ -197,7 +200,6 @@ export class AudioSystem {
         return {
             volume: d.volume ?? 1,
             referenceDistance: d.referenceDistance ?? 1,
-            maxDistance: d.maxDistance ?? 100,
         };
     }
 

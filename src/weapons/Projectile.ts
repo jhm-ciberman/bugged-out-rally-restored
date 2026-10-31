@@ -33,6 +33,8 @@ export interface ProjectileData {
     readonly magnetic: boolean;
     readonly damage: number;
     readonly explosionSound: string;
+    /** Whether it glows as it flies (`hasLight`). */
+    readonly hasLight: boolean;
 }
 
 /** The Zinger rocket (`RocketProjectile` in weapons.cs). */
@@ -47,6 +49,7 @@ export const ROCKET: ProjectileData = {
     magnetic: false,
     damage: 40,
     explosionSound: 'RocketExplosionSound',
+    hasLight: true,
 };
 
 /** The Magno bomb (`MagneticBombProjectile` in weapons.cs). */
@@ -61,6 +64,7 @@ export const BOMB: ProjectileData = {
     magnetic: true,
     damage: 40,
     explosionSound: 'RocketExplosionSound',
+    hasLight: true,
 };
 
 /** Frog spit (`SpitProjectile` in dynShape.cs). */
@@ -75,6 +79,7 @@ export const SPIT: ProjectileData = {
     magnetic: false,
     damage: 25,
     explosionSound: 'SpitExplosionSound',
+    hasLight: false,
 };
 
 const _end = new THREE.Vector3();
