@@ -1,15 +1,32 @@
+import { assetUrl } from '../../assets/AssetPaths';
 import { getSettings, type Settings, updateSettings } from '../../game/Settings';
 import { MenuScreen, rel } from './MenuScreen';
 
+/** `GuiSafariPopUpMenuProfile`: orange fill, white bold text, black 2 px border. */
+const POPUP_STYLE: Partial<CSSStyleDeclaration> = {
+    background: 'rgb(255, 192, 55)',
+    color: '#fff',
+    border: '2px solid #000',
+    font: 'bold 20px Arial, sans-serif',
+    textAlign: 'center',
+    textShadow: '1px 1px 0 #000',
+    cursor: 'pointer',
+};
+
 /**
- * The options menu (`optionsMenu.gui`): music and sound volume, mouse sensitivity and full screen.
- * The resolution, color depth and texture detail controls of the original have no meaning in a browser
- * and are left out; their labels are part of the background picture.
+ * The options menu (`optionsMenu.gui`). The labels are part of the background picture, so each control
+ * sits where the original had one: render quality takes the Resolution menu, Unlock Everything takes
+ * the Bit Depth menu, and Texture Detail, Full Screen, the volumes and mouse sensitivity keep their place.
  */
 export class OptionsMenu extends MenuScreen {
     constructor(onBack: () => void, onChange: (settings: Settings) => void) {
         super('optionsselection.jpg');
         const s = getSettings();
+        const changed = (changes: Partial<Settings>) => {
+            updateSettings(changes);
+            onChange(getSettings());
+        };
+
         const slider = (rect: ReturnType<typeof rel>, min: number, value: number, set: (v: number) => void) => {
             const input = this.add(document.createElement('input'), rect);
             input.type = 'range';
@@ -18,21 +35,48 @@ export class OptionsMenu extends MenuScreen {
             input.step = '0.01';
             input.value = String(value);
             input.style.accentColor = 'rgb(255, 192, 55)';
-            input.addEventListener('input', () => {
-                set(Number(input.value));
-                onChange(getSettings());
-            });
+            input.addEventListener('input', () => set(Number(input.value)));
         };
-        slider(rel(464, 164, 240, 45), 0, s.soundVolume, (v) => updateSettings({ soundVolume: v }));
-        slider(rel(464, 100, 236, 50), 0, s.musicVolume, (v) => updateSettings({ musicVolume: v }));
-        slider(rel(460, 409, 234, 50), 0.2, s.mouseSensitivity, (v) => updateSettings({ mouseSensitivity: v }));
+        slider(rel(464, 164, 240, 45), 0, s.soundVolume, (v) => changed({ soundVolume: v }));
+        slider(rel(464, 100, 236, 50), 0, s.musicVolume, (v) => changed({ musicVolume: v }));
+        slider(rel(460, 409, 234, 50), 0.2, s.mouseSensitivity, (v) => changed({ mouseSensitivity: v }));
         const off = { font: 'bold 16px Arial, sans-serif', color: '#fff' };
         this.text('off', off, rel(443, 101, 16, 20));
         this.text('off', off, rel(443, 164, 16, 20));
 
-        const fullscreen = this.add(document.createElement('input'), rel(75, 389, 14, 15));
-        fullscreen.type = 'checkbox';
-        fullscreen.checked = document.fullscreenElement !== null;
+        const quality = this._popup(
+            rel(75, 125, 239, 34),
+            [
+                ['low', 'Low'],
+                ['medium', 'Medium'],
+                ['high', 'High'],
+                ['native', 'Native'],
+            ],
+            s.renderQuality,
+        );
+        quality.addEventListener('change', () =>
+            changed({ renderQuality: quality.value as Settings['renderQuality'] }),
+        );
+
+        const detail = this._popup(
+            rel(75, 319, 244, 40),
+            ['High', 'Normal', 'Low', 'V.Low'].map((label, i) => [String(i), label]),
+            String(s.textureDetail),
+        );
+        detail.addEventListener('change', () => changed({ textureDetail: Number(detail.value) }));
+
+        this._coverBitDepthLabel();
+        // Styled like the labels painted into the background.
+        this.text(
+            'Unlock Everything',
+            { font: 'bold 22px Verdana, Tahoma, sans-serif', color: 'rgb(215, 14, 48)' },
+            rel(94, 186, 300, 28),
+            { textShadow: '2px 2px 1px rgba(60, 0, 0, 0.7)' },
+        );
+        const unlock = this._checkbox(rel(75, 192, 14, 15), s.unlockAll);
+        unlock.addEventListener('change', () => changed({ unlockAll: unlock.checked }));
+
+        const fullscreen = this._checkbox(rel(75, 389, 14, 15), document.fullscreenElement !== null);
         fullscreen.addEventListener('change', () => {
             if (fullscreen.checked) void document.documentElement.requestFullscreen().catch(() => undefined);
             else if (document.fullscreenElement) void document.exitFullscreen();
@@ -40,5 +84,37 @@ export class OptionsMenu extends MenuScreen {
 
         // The original points at `buttons/back`, which never shipped; `back` is the art it meant.
         this.button('back', rel(69, 525, 95, 29), onBack);
+    }
+
+    private _popup(rect: ReturnType<typeof rel>, options: string[][], value: string): HTMLSelectElement {
+        const select = this.add(document.createElement('select'), rect);
+        Object.assign(select.style, POPUP_STYLE);
+        for (const [key, label] of options) {
+            const option = document.createElement('option');
+            option.value = key;
+            option.textContent = label;
+            select.append(option);
+        }
+        select.value = value;
+        return select;
+    }
+
+    private _checkbox(rect: ReturnType<typeof rel>, checked: boolean): HTMLInputElement {
+        const box = this.add(document.createElement('input'), rect);
+        box.type = 'checkbox';
+        box.checked = checked;
+        return box;
+    }
+
+    /**
+     * Paints the empty panel right of the baked "Bit Depth:" label over it.
+     */
+    private _coverBitDepthLabel(): void {
+        const patch = this.add(document.createElement('canvas'), rel(74, 186, 106, 24));
+        patch.width = 106;
+        patch.height = 24;
+        const img = new Image();
+        img.onload = () => patch.getContext('2d')?.drawImage(img, 194, 186, 106, 24, 0, 0, 106, 24);
+        img.src = assetUrl('client/ui/optionsselection.jpg');
     }
 }

@@ -123,7 +123,10 @@ export class App {
         this._openDialog(
             new OptionsMenu(
                 () => this._closeDialog(),
-                () => this._game.audio.applySettings(),
+                () => {
+                    this._game.audio.applySettings();
+                    this._game.applySettings();
+                },
             ),
         );
     }

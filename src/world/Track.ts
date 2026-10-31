@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { assetUrl, resolveTorqueFile } from '../assets/AssetPaths';
 import { updateIflTextures } from '../assets/IflTexture';
 import type { ModelLibrary } from '../assets/ModelLibrary';
+import { textureAnisotropy } from '../game/Settings';
 import { shapeForDatablock } from '../game/ShapeDatablocks';
 import type { IUpdatable } from '../IUpdatable';
 import { CollisionWorld } from '../physics/CollisionWorld';
@@ -208,7 +209,7 @@ export async function loadTexture(torquePath: string): Promise<THREE.Texture> {
     }
     const tex = await textureLoader.loadAsync(url);
     tex.colorSpace = THREE.NoColorSpace;
-    tex.anisotropy = 8;
+    tex.anisotropy = textureAnisotropy();
     return tex;
 }
 

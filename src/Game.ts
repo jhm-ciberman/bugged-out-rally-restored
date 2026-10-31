@@ -5,6 +5,7 @@ import { ModelLibrary } from './assets/ModelLibrary';
 import { AudioSystem } from './audio/AudioSystem';
 import { FlyCamera } from './camera/FlyCamera';
 import { RaceSession } from './game/RaceSession';
+import { renderPixelRatio } from './game/Settings';
 import type { IUpdatable } from './IUpdatable';
 import { parseVector } from './torque/TorqueMath';
 import type { FinishChoice } from './ui/FinishScreen';
@@ -68,7 +69,7 @@ export class Game {
 
         this._renderer = new THREE.WebGLRenderer({ antialias: true });
         this._renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
-        this._renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        this._renderer.setPixelRatio(renderPixelRatio());
         this._renderer.setSize(window.innerWidth, window.innerHeight);
         this._container.appendChild(this._renderer.domElement);
 
@@ -198,7 +199,15 @@ export class Game {
         this._hud?.render(this._renderer, this._camera);
     };
 
+    /**
+     * Applies the graphics settings that can change while the game runs.
+     */
+    applySettings(): void {
+        this._onResize();
+    }
+
     private readonly _onResize = (): void => {
+        this._renderer.setPixelRatio(renderPixelRatio());
         this._camera.aspect = this._aspect;
         this._camera.fov = verticalFov(this._aspect);
         this._camera.updateProjectionMatrix();

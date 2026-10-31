@@ -1,3 +1,5 @@
+import { getSettings } from './Settings';
+
 /**
  * A car on the player selection menu.
  */
@@ -37,8 +39,9 @@ function car(label: string, datablock: string, shape: string, picture: string, p
 }
 
 /**
- * Whether a player with `winnings` may drive `car`. The first car is always open.
+ * Whether a player with `winnings` may drive `car`. The first car is always open, and so is every car
+ * while Unlock Everything is on.
  */
 export function isCarUnlocked(car: CarEntry, winnings: number): boolean {
-    return car === CARS[0] || winnings >= car.price;
+    return getSettings().unlockAll || car === CARS[0] || winnings >= car.price;
 }

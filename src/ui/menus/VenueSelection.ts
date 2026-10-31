@@ -1,6 +1,7 @@
 import type { RaceEvent } from '../../ai/BotRoster';
 import { firstPrize } from '../../game/Prizes';
 import type { Profile } from '../../game/Profiles';
+import { getSettings } from '../../game/Settings';
 import { TRACK_NAMES } from '../../game/Tracks';
 import { ABOUT_TEXT, MEDIUM_RED_TEXT, MEDIUM_TEXT } from '../GuiControls';
 import { MenuScreen, rel640 } from './MenuScreen';
@@ -36,6 +37,7 @@ const PURSE_DISPLAY_FACTOR = 1.75;
  * Explore and Single share one series, Circuit has its own.
  */
 export function isTrackUnlocked(profile: Profile, event: RaceEvent, index: number): boolean {
+    if (getSettings().unlockAll) return true;
     const highest = event === 'circuit' ? profile.highestCircuit : profile.highestSingle;
     return highest >= index;
 }
