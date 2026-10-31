@@ -35,3 +35,16 @@ export function resolveTorqueFile(torquePath: string, extensions: readonly strin
     }
     return null;
 }
+
+/**
+ * Returns the asset path (relative to `public/assets`) of the first shipped file named `fileName`
+ * (case-insensitive), or `null`.
+ */
+export function findAssetByName(fileName: string): string | null {
+    if (!manifest) throw new Error('Asset manifest not loaded');
+    const name = fileName.toLowerCase();
+    for (const path of manifest) {
+        if (path === name || path.endsWith(`/${name}`)) return path;
+    }
+    return null;
+}

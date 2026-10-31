@@ -18,6 +18,13 @@ export class Car {
     readonly renderPosition = new THREE.Vector3();
     readonly renderRotation = new THREE.Quaternion();
 
+    /** Zinger rockets carried. */
+    rockets = 0;
+    /** Magno bombs carried. */
+    bombs = 0;
+    /** Damage taken; the car is wrecked at `vehicle.data.maxDamage`. */
+    damage = 0;
+
     private _sounds: VehicleSounds | null = null;
 
     private constructor(
@@ -75,6 +82,16 @@ export class Car {
         this.vehicle.advanceTime(deltaSeconds);
         this.view.update(this.renderPosition, this.renderRotation);
         this._sounds?.update();
+    }
+
+    /** Remaining health, 0 to 1. */
+    get health(): number {
+        return Math.max(0, 1 - this.damage / this.vehicle.data.maxDamage);
+    }
+
+    /** Whether the car has taken enough damage to be wrecked. */
+    get isWrecked(): boolean {
+        return this.damage >= this.vehicle.data.maxDamage;
     }
 
     /**

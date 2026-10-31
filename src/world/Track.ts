@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { assetUrl, resolveTorqueFile } from '../assets/AssetPaths';
+import { updateIflTextures } from '../assets/IflTexture';
 import type { ModelLibrary } from '../assets/ModelLibrary';
 import { shapeForDatablock } from '../game/ShapeDatablocks';
 import type { IUpdatable } from '../IUpdatable';
@@ -38,6 +39,8 @@ export class Track implements IUpdatable {
         private readonly _sky: SkyBox | null,
         private readonly _water: WaterSurface | null,
         private readonly _spinners: readonly THREE.Object3D[],
+        /** Pickups placed in the mission (`Item` objects), with their models. */
+        readonly items: readonly THREE.Object3D[],
     ) {}
 
     /**
@@ -91,16 +94,18 @@ export class Track implements IUpdatable {
         const placed = await Promise.all(objects.map((o) => placeObject(o, models)));
         const solids: THREE.Object3D[] = [];
         const spinners: THREE.Object3D[] = [];
+        const items: THREE.Object3D[] = [];
         for (const [i, model] of placed.entries()) {
             if (!model) continue;
             root.add(model);
             const obj = objects[i];
             if (obj.className === 'InteriorInstance') solids.push(model);
+            if (obj.className === 'Item') items.push(model);
             if (obj.className === 'Item' && obj.fields.get('rotate') === '1') spinners.push(model);
         }
         const collision = new CollisionWorld(terrain, solids);
 
-        return new Track(number, objects, terrain, root, collision, visibleDistance, sky, water, spinners);
+        return new Track(number, objects, terrain, root, collision, visibleDistance, sky, water, spinners, items);
     }
 
     /**
@@ -113,6 +118,7 @@ export class Track implements IUpdatable {
 
     update(deltaSeconds: number): void {
         this._time += deltaSeconds;
+        updateIflTextures(this._time);
         this._sky?.update();
         this._water?.update(deltaSeconds);
         const angle = (this._time / ITEM_SPIN_SECONDS) * Math.PI * 2;

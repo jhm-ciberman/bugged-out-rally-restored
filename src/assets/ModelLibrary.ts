@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { useTorqueFog } from '../render/TorqueFog';
 import { assetUrl } from './AssetPaths';
+import { animateWithIfl, iflForMaterial } from './IflTexture';
 
 /**
  * Loads the converted Torque shapes (`.dts`) and interiors (`.dif`) and hands out copies.
@@ -78,7 +79,7 @@ function prepareMesh(mesh: THREE.Mesh): void {
     const map = old.map;
     if (map) map.colorSpace = THREE.NoColorSpace;
     // Torque lit shapes with plain diffuse lighting, no specular.
-    mesh.material = useTorqueFog(
+    const material = useTorqueFog(
         new THREE.MeshLambertMaterial({
             name: old.name,
             map,
@@ -87,5 +88,9 @@ function prepareMesh(mesh: THREE.Mesh): void {
             side: THREE.DoubleSide,
         }),
     );
+    mesh.material = material;
     old.dispose();
+    // Animated textures (image file lists) were left untextured by the converter.
+    const ifl = map ? null : iflForMaterial(old.name);
+    if (ifl) void animateWithIfl(material, ifl);
 }
