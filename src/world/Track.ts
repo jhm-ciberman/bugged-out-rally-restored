@@ -108,6 +108,18 @@ export class Track implements IUpdatable {
         const shapeSolids = await Promise.all(objects.map((o) => placeCollision(o, models)));
         for (const solid of shapeSolids) if (solid) solids.push(solid);
         const collision = new CollisionWorld(terrain, solids);
+        if (waterObj) {
+            const pos = parseVector(waterObj.fields.get('position'));
+            const scale = parseVector(waterObj.fields.get('scale'), 1);
+            collision.water = {
+                min: new THREE.Vector2(pos.x, pos.y),
+                max: new THREE.Vector2(pos.x + scale.x, pos.y + scale.y),
+                bottomZ: pos.z,
+                surfaceZ: pos.z + scale.z,
+                viscosity: Number(waterObj.fields.get('viscosity') ?? 15),
+                density: Number(waterObj.fields.get('density') ?? 1),
+            };
+        }
 
         return new Track(number, objects, terrain, root, collision, visibleDistance, sky, water, spinners, items);
     }

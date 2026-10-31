@@ -63,6 +63,9 @@ const _tireY = new THREE.Vector3();
 const _wheelX = new THREE.Vector3();
 const _end = new THREE.Vector3();
 const UP = new THREE.Vector3(0, 0, 1);
+const _box = new THREE.Box3();
+const _m = new THREE.Matrix4();
+const _one = new THREE.Vector3(1, 1, 1);
 
 /**
  * A car simulated with the Torque `WheeledVehicle` model (`game/vehicles/wheeledVehicle.cc` and `vehicle.cc`):
@@ -85,6 +88,10 @@ export class WheeledVehicle {
     /** Called when the body hits something harder than `minImpactSpeed`, with the change of velocity. */
     onImpact: ((velocityChange: THREE.Vector3) => void) | null = null;
 
+    /** Fraction of the body under water, 0 to 1. */
+    waterCoverage = 0;
+    private _drag: number;
+    private _buoyancy = 0;
     private _restCount = 0;
     private readonly _contacts: Contact[] = [];
     private readonly _hullWorld: THREE.Vector3[];
@@ -99,6 +106,7 @@ export class WheeledVehicle {
         r.restitution = data.bodyRestitution;
         r.setCenterOfMass(data.massCenter);
         r.setObjectInertiaBox(data.inertiaBox);
+        this._drag = data.drag;
         this.wheels = data.wheels.map((mount) => ({
             mount,
             extension: 1,
@@ -142,6 +150,7 @@ export class WheeledVehicle {
      * Runs one 32 ms tick with the given controls (`Vehicle::processTick`).
      */
     tick(move: VehicleMove): void {
+        this._updateContainer();
         this._updateMove(move);
         const count = this.data.integration;
         for (let i = 0; i < count; i++) this._updatePos(TICK_SECONDS / count);
@@ -159,6 +168,27 @@ export class WheeledVehicle {
             .multiplyScalar(this.data.cameraDecay)
             .addScaledVector(this.rigid.linVelocity, this.data.cameraLag);
         this.cameraOffset.addScaledVector(_v, -dt);
+    }
+
+    /**
+     * Measures how deep the body is in water and sets drag and buoyancy (`ShapeBase::updateContainer`).
+     */
+    private _updateContainer(): void {
+        this._drag = this.data.drag;
+        this._buoyancy = 0;
+        this.waterCoverage = 0;
+        const water = this._world.water;
+        const p = this.rigid.linPosition;
+        if (!water || p.x < water.min.x || p.x > water.max.x || p.y < water.min.y || p.y > water.max.y) return;
+        if (p.z < water.bottomZ || p.z > water.surfaceZ) return;
+        // Height of the world box of the body.
+        _box.copy(this.data.bounds).applyMatrix4(_m.compose(p, this.rigid.angPosition, _one));
+        const coverage = water.surfaceZ < _box.max.z ? (water.surfaceZ - _box.min.z) / (_box.max.z - _box.min.z) : 1;
+        this.waterCoverage = THREE.MathUtils.clamp(coverage, 0, 1);
+        if (this.waterCoverage >= 0.1) {
+            this._drag = this.data.drag * water.viscosity * this.waterCoverage;
+            this._buoyancy = (water.density / this.data.density) * this.waterCoverage;
+        }
     }
 
     private _updateMove(move: VehicleMove): void {
@@ -372,8 +402,10 @@ export class WheeledVehicle {
         if (this.jetting) r.force.addScaledVector(_by, data.jetForce);
 
         // Drag (buoyancy comes with water support).
-        r.force.addScaledVector(r.linVelocity, -data.drag);
-        r.torque.addScaledVector(r.angMomentum, -data.drag);
+        // Container drag and buoyancy (water).
+        r.force.z += -this._buoyancy * GRAVITY * r.mass;
+        r.force.addScaledVector(r.linVelocity, -this._drag);
+        r.torque.addScaledVector(r.angMomentum, -this._drag);
 
         if (r.atRest && (r.force.lengthSq() > 0 || r.torque.lengthSq() > 0)) r.atRest = false;
 

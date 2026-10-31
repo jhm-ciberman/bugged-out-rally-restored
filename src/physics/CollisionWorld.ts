@@ -25,6 +25,18 @@ export interface Contact {
 }
 
 /**
+ * A box of water (`WaterBlock`): everything between `bottomZ` and `surfaceZ` inside the rectangle.
+ */
+export interface WaterVolume {
+    readonly min: THREE.Vector2;
+    readonly max: THREE.Vector2;
+    readonly bottomZ: number;
+    readonly surfaceZ: number;
+    readonly viscosity: number;
+    readonly density: number;
+}
+
+/**
  * A moving solid that other bodies collide with as if it were fixed for the instant of contact,
  * like Torque vehicles treat each other.
  */
@@ -115,6 +127,8 @@ export class CollisionWorld {
     private readonly _raycaster = new THREE.Raycaster();
     /** Moving solids (cars, boulders), refreshed by their owners every tick. */
     readonly obstacles: Obstacle[] = [];
+    /** The track's water, if any. */
+    water: WaterVolume | null = null;
 
     /**
      * @param terrain The track terrain.

@@ -19,6 +19,9 @@ import { Zones } from './Zones';
 
 /** Most ticks run in one frame, so a long stall does not freeze the game catching up. */
 const MAX_TICKS_PER_FRAME = 8;
+/** Water damage per period (`$DamageWater`, rescheduled every 50 ms). */
+const WATER_DAMAGE = 0.075;
+const WATER_DAMAGE_PERIOD = 0.05;
 /** Seconds a wrecked car stays gone before it reappears at its last checkpoint (native `onDestroy`). */
 const RESPAWN_SECONDS = 4;
 
@@ -216,6 +219,10 @@ export class RaceSession implements IUpdatable {
         if (!racing) move.throttle = 0;
         if (this._input.consumeReset()) this.resetPlayer();
         for (const car of this.cars) {
+            // Water hurts while the car is in it (`setDamageDt`: 0.075 every 50 ms).
+            if (car.vehicle.waterCoverage > 0 && car.respawnTimer <= 0) {
+                car.applyDamage((WATER_DAMAGE * TICK_SECONDS) / WATER_DAMAGE_PERIOD, { kind: 'water', source: null });
+            }
             if (car.isWrecked) this.wreck(car);
             if (car.respawnTimer > 0) this._updateRespawn(car);
         }

@@ -69,4 +69,25 @@ describe('WheeledVehicle', () => {
         const car = new WheeledVehicle(getVehicleData('Cockroach'), flatWorld());
         expect(car.energy).toBe(0);
     });
+
+    it('sinks slower than free fall in deep water', () => {
+        const world = flatWorld();
+        world.water = {
+            min: new THREE.Vector2(-500, -500),
+            max: new THREE.Vector2(500, 500),
+            bottomZ: 50,
+            surfaceZ: 130,
+            viscosity: 5,
+            density: 1,
+        };
+        const car = new WheeledVehicle(getVehicleData('Cockroach'), world);
+        car.setTransform(new THREE.Vector3(0, 0, 120), new THREE.Quaternion());
+        run(car, 20);
+        expect(car.waterCoverage).toBe(1);
+        // Free fall would reach 20 m/s * 0.64 s = 12.8 m/s. Buoyancy (density 1 / 4) and drag
+        // (0.6 x viscosity 5) slow it down, but on a 200 kg body only a little, as in Torque.
+        const sink = Math.abs(car.rigid.linVelocity.z);
+        expect(sink).toBeLessThan(11);
+        expect(sink).toBeGreaterThan(5);
+    });
 });

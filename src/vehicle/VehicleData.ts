@@ -55,6 +55,8 @@ export interface VehicleData {
     /** Size of the box used for the moment of inertia (the shape bounds). */
     readonly inertiaBox: THREE.Vector3;
     readonly drag: number;
+    /** Body density, for buoyancy in water. */
+    readonly density: number;
     readonly bodyFriction: number;
     readonly bodyRestitution: number;
     readonly engineTorque: number;
@@ -210,6 +212,7 @@ export function getVehicleData(name: string): VehicleData {
         massCenter: vec(block.massCenter),
         inertiaBox: bounds.getSize(new THREE.Vector3()),
         drag: num(block, 'drag', 0.7),
+        density: num(block, 'density', 4),
         bodyFriction: num(block, 'bodyFriction', 0),
         bodyRestitution: num(block, 'bodyRestitution', 1),
         engineTorque: num(block, 'engineTorque', 1),

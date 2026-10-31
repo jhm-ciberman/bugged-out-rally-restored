@@ -12,7 +12,7 @@ import type { Track } from '../world/Track';
  * Why a car took damage. Zone damage (death zones, cacti) bypasses scoring in the original.
  */
 export interface DamageCause {
-    readonly kind: 'impact' | 'projectile' | 'zone';
+    readonly kind: 'impact' | 'projectile' | 'water' | 'zone';
     /** The car that fired, for projectile damage. */
     readonly source: Car | null;
 }
