@@ -146,6 +146,22 @@ export class CollisionWorld {
     readonly zones: PhysicalZone[] = [];
 
     /**
+     * Whether `point` is inside the track's water (`pointInWater`).
+     */
+    isInWater(point: THREE.Vector3): boolean {
+        const w = this.water;
+        if (!w) return false;
+        return (
+            point.x >= w.min.x &&
+            point.x <= w.max.x &&
+            point.y >= w.min.y &&
+            point.y <= w.max.y &&
+            point.z >= w.bottomZ &&
+            point.z <= w.surfaceZ
+        );
+    }
+
+    /**
      * Writes the total force of the zones containing `point` into `force` and returns the tire grip
      * multiplier there (`ShapeBase::updateContainer` in the exe: the last zone's friction wins).
      */

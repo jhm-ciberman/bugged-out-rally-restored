@@ -359,3 +359,54 @@ export const TIRE_DUST: ParticleLook = {
     dragCoefficient: 2,
     useInvAlpha: true,
 };
+
+/** Green blobs of a frog spit explosion (`SpitExplosionSpitParticle`; drag misspelled, so none). */
+export const SPIT_SPLAT: ParticleLook = {
+    texture: '~/data/shapes/rocket/fire',
+    lifetime: 0.5,
+    lifetimeVariance: 0.3,
+    colors: [
+        [0.1, 0.9, 0.1, 0.8],
+        [0, 0.8, 0, 0.8],
+        [0, 0, 0, 0],
+    ],
+    sizes: [1.5, 0.9, 0.5],
+    times: [0, 0.5, 1],
+    gravityCoefficient: 0,
+    dragCoefficient: 0,
+    useInvAlpha: false,
+};
+
+/** Rising bubbles of a car blowing up under water (`VehicleExplosionBubble`). */
+export const EXPLOSION_BUBBLE: ParticleLook = {
+    texture: '~/data/shapes/particles/bubble',
+    lifetime: 1.5,
+    lifetimeVariance: 0.6,
+    colors: [
+        [0.7, 0.8, 1, 0.4],
+        [0.7, 0.8, 1, 0.4],
+        [0.7, 0.8, 1, 0],
+    ],
+    sizes: [0.3, 0.3, 0.3],
+    times: [0, 0.5, 1],
+    gravityCoefficient: -0.25,
+    dragCoefficient: 0,
+    useInvAlpha: false,
+};
+
+/** Water thrown up by a car blowing up under water (`VehicleExplosionWaterSparks`). */
+export const EXPLOSION_WATER_SPARK: ParticleLook = {
+    texture: '~/data/shapes/particles/bubble',
+    lifetime: 0.5,
+    lifetimeVariance: 0.35,
+    colors: [
+        [0.4, 0.4, 1, 1],
+        [0.4, 0.4, 1, 1],
+        [0.4, 0.4, 1, 0],
+    ],
+    sizes: [0.5, 0.5, 0.5],
+    times: [0, 0.5, 1],
+    gravityCoefficient: 0,
+    dragCoefficient: 0,
+    useInvAlpha: true,
+};

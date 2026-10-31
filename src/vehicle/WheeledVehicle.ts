@@ -220,8 +220,7 @@ export class WheeledVehicle {
         this.surfaceFriction = this._world.zoneEffects(this.rigid.linPosition, this.appliedForce);
         const water = this._world.water;
         const p = this.rigid.linPosition;
-        if (!water || p.x < water.min.x || p.x > water.max.x || p.y < water.min.y || p.y > water.max.y) return;
-        if (p.z < water.bottomZ || p.z > water.surfaceZ) return;
+        if (!water || !this._world.isInWater(p)) return;
         // Height of the world box of the body.
         _box.copy(this.data.bounds).applyMatrix4(_m.compose(p, this.rigid.angPosition, _one));
         const coverage = water.surfaceZ < _box.max.z ? (water.surfaceZ - _box.min.z) / (_box.max.z - _box.min.z) : 1;

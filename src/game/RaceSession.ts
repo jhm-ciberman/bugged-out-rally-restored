@@ -11,6 +11,7 @@ import type { MissionObject } from '../torque/MissionFile';
 import { parseRotation, parseVector } from '../torque/TorqueMath';
 import { TICK_SECONDS, type VehicleMove } from '../vehicle/WheeledVehicle';
 import { Combat, type Triggers } from '../weapons/Combat';
+import { VEHICLE_EXPLOSION, VEHICLE_WATER_EXPLOSION } from '../weapons/Explosions';
 import type { Track } from '../world/Track';
 import { Car } from './Car';
 import { Hazards } from './Hazards';
@@ -182,6 +183,10 @@ export class RaceSession implements IUpdatable {
         car.boosting = false;
         car.view.object.visible = false;
         car.obstacle.enabled = false;
+        // The car blows up from the middle of its box (`ShapeBase::blowUp`), with a water version under water.
+        const center = car.vehicle.data.bounds.getCenter(new THREE.Vector3()).add(car.vehicle.rigid.linPosition);
+        const inWater = this.track.collision.isInWater(center);
+        this.combat.explode(inWater ? VEHICLE_WATER_EXPLOSION : VEHICLE_EXPLOSION, center);
     }
 
     /**

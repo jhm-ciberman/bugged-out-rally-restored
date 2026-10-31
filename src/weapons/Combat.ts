@@ -3,7 +3,8 @@ import type { ModelLibrary } from '../assets/ModelLibrary';
 import type { AudioSystem } from '../audio/AudioSystem';
 import type { Car } from '../game/Car';
 import type { CollisionWorld } from '../physics/CollisionWorld';
-import { EXPLOSION_FIRE, EXPLOSION_SMOKE, EXPLOSION_SPARKS, Particles, ROCKET_EXHAUST } from '../render/Particles';
+import { Particles, ROCKET_EXHAUST } from '../render/Particles';
+import type { ExplosionData, ExplosionShake } from './Explosions';
 import { BOMB, Projectile, type ProjectileData, ROCKET } from './Projectile';
 import { WeaponImage } from './WeaponImage';
 
@@ -17,10 +18,8 @@ const EXHAUST_PERIOD = 0.005;
 const EXHAUST_SPEED = 0.1;
 /** Glow of a flying projectile (`hasLight`, `lightRadius`, `lightColor`). */
 const PROJECTILE_LIGHT = { radius: 5, color: new THREE.Color(0.5, 0.5, 0.25) };
-/** Explosion flash (`RocketExplosion`: light radius 6 to 3, color 0.5 0.5 0 to black, over its 1.2 s life). */
-const EXPLOSION_LIGHT = { seconds: 1.2, startRadius: 6, endRadius: 3, color: new THREE.Color(0.5, 0.5, 0) };
-/** Camera shake of an explosion (`camShakeAmp`, `camShakeFreq`, `camShakeDuration`, `camShakeRadius`). */
-const SHAKE = { amplitude: 1, frequency: new THREE.Vector3(10, 11, 10), seconds: 0.5, radius: 10 };
+/** Explosion flash: light radius 6 to 3 while its color fades to black, over the 1.2 s life. */
+const EXPLOSION_LIGHT = { seconds: 1.2, startRadius: 6, endRadius: 3 };
 /** Lights kept in the scene. A fixed count, so adding one never makes every material recompile. */
 const LIGHT_POOL = 6;
 
@@ -47,11 +46,13 @@ interface Flying {
 
 interface Flash {
     readonly light: THREE.PointLight;
+    readonly color: THREE.Color;
     age: number;
 }
 
 interface Shake {
     readonly center: THREE.Vector3;
+    readonly data: ExplosionShake;
     age: number;
 }
 
@@ -99,7 +100,14 @@ export class Combat {
             this.object.add(light);
             this._freeLights.push(light);
         }
-        for (const p of ['RocketFireSound', 'BombFireSound', 'RocketExplosionSound']) _audio?.preload(p);
+        for (const p of [
+            'RocketFireSound',
+            'BombFireSound',
+            'RocketExplosionSound',
+            'VehicleExplosionSound',
+            'LiquidExplosionSound',
+        ])
+            _audio?.preload(p);
     }
 
     /**
@@ -130,7 +138,7 @@ export class Combat {
             const hit = f.projectile.tick(this._world, cars);
             if (f.projectile.data === ROCKET) this._exhaust(f.previous, f.projectile.position, dt);
             if (hit) {
-                this._explode(f.projectile, hit.point);
+                this.explode(f.projectile.data.explosion, hit.point);
                 if (hit.car)
                     this.onDamage?.({
                         target: hit.car,
@@ -140,7 +148,7 @@ export class Combat {
                 this._remove(i);
             } else if (f.projectile.expired) {
                 // Magnetic bombs blow up when their time runs out; the others just vanish.
-                if (f.projectile.data.magnetic) this._explode(f.projectile, f.projectile.position);
+                if (f.projectile.data.magnetic) this.explode(f.projectile.data.explosion, f.projectile.position);
                 this._remove(i);
             }
         }
@@ -174,11 +182,11 @@ export class Combat {
             }
             flash.light.distance =
                 EXPLOSION_LIGHT.startRadius + (EXPLOSION_LIGHT.endRadius - EXPLOSION_LIGHT.startRadius) * t;
-            flash.light.color.copy(EXPLOSION_LIGHT.color).multiplyScalar(1 - t);
+            flash.light.color.copy(flash.color).multiplyScalar(1 - t);
         }
         for (let i = this._shakes.length - 1; i >= 0; i--) {
             this._shakes[i].age += dt;
-            if (this._shakes[i].age >= SHAKE.seconds) this._shakes.splice(i, 1);
+            if (this._shakes[i].age >= this._shakes[i].data.seconds) this._shakes.splice(i, 1);
         }
         this.particles.update(dt);
     }
@@ -188,15 +196,15 @@ export class Combat {
      */
     cameraShake(position: THREE.Vector3): THREE.Vector3 {
         const offset = new THREE.Vector3();
-        for (const s of this._shakes) {
-            const distance = s.center.distanceTo(position);
-            if (distance > SHAKE.radius) continue;
+        for (const { center, data, age } of this._shakes) {
+            const distance = center.distanceTo(position);
+            if (distance > data.radius) continue;
             // Fades out over the shake's life and with distance from the blast.
-            const fade = (1 - s.age / SHAKE.seconds) * (1 - distance / SHAKE.radius) * SHAKE.amplitude;
+            const fade = (1 - age / data.seconds) * (1 - distance / data.radius) * data.amplitude;
             const t = this._time * Math.PI * 2;
-            offset.x += Math.sin(t * SHAKE.frequency.x) * fade;
-            offset.y += Math.sin(t * SHAKE.frequency.y + 1) * fade;
-            offset.z += Math.sin(t * SHAKE.frequency.z + 2) * fade;
+            offset.x += Math.sin(t * data.frequency.x) * fade;
+            offset.y += Math.sin(t * data.frequency.y + 1) * fade;
+            offset.z += Math.sin(t * data.frequency.z + 2) * fade;
         }
         return offset;
     }
@@ -263,21 +271,24 @@ export class Combat {
     }
 
     /**
-     * Plays an explosion (`RocketExplosion`): a ball of fire, smoke and sparks, a flash and a camera shake.
+     * Plays an explosion at `point`: its particles, sound, flash and camera shake.
      */
-    private _explode(projectile: Projectile, point: THREE.Vector3): void {
-        // particleEmitter: 100 fire particles in a 2 m ball, ejected at 0.8 m/s.
-        this.particles.burst(EXPLOSION_FIRE, point, 100, 0.8, 0.5, undefined, { radius: 2 });
-        // emitter[0]: smoke every 10 ms for 250 ms at 4 m/s; emitter[1]: sparks every 2 ms for 150 ms at 30 m/s.
-        this.particles.burst(EXPLOSION_SMOKE, point, 25, 4, 0.5);
-        this.particles.burst(EXPLOSION_SPARKS, point, 75, 30, 10);
+    explode(data: ExplosionData, point: THREE.Vector3): void {
+        const at = new THREE.Vector3();
+        for (const burst of data.bursts) {
+            at.copy(point);
+            at.z += burst.offset ?? 0;
+            this.particles.burst(burst.look, at, burst.count, burst.speed, burst.speedVariance, undefined, {
+                radius: burst.radius,
+            });
+        }
         const light = this._takeLight();
         if (light) {
             light.position.copy(point);
-            this._flashes.push({ light, age: 0 });
+            this._flashes.push({ light, color: data.lightColor, age: 0 });
         }
-        this._shakes.push({ center: point.clone(), age: 0 });
-        if (this._audio) void this._audio.play3d(projectile.data.explosionSound, point, this.object);
+        if (data.shake) this._shakes.push({ center: point.clone(), data: data.shake, age: 0 });
+        if (this._audio) void this._audio.play3d(data.sound, point, this.object);
     }
 
     private _takeLight(): THREE.PointLight | null {

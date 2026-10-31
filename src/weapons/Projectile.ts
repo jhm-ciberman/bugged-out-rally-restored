@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { Car } from '../game/Car';
 import type { CollisionWorld } from '../physics/CollisionWorld';
+import { type ExplosionData, ROCKET_EXPLOSION, SPIT_EXPLOSION } from './Explosions';
 
 /** Projectiles step on the 32 ms game tick. */
 export const PROJECTILE_TICK = 0.032;
@@ -32,7 +33,8 @@ export interface ProjectileData {
     readonly selfGuidance: boolean;
     readonly magnetic: boolean;
     readonly damage: number;
-    readonly explosionSound: string;
+    /** What it does when it hits something (`Explosion`). */
+    readonly explosion: ExplosionData;
     /** Whether it glows as it flies (`hasLight`). */
     readonly hasLight: boolean;
 }
@@ -48,7 +50,7 @@ export const ROCKET: ProjectileData = {
     selfGuidance: true,
     magnetic: false,
     damage: 40,
-    explosionSound: 'RocketExplosionSound',
+    explosion: ROCKET_EXPLOSION,
     hasLight: true,
 };
 
@@ -63,7 +65,7 @@ export const BOMB: ProjectileData = {
     selfGuidance: true,
     magnetic: true,
     damage: 40,
-    explosionSound: 'RocketExplosionSound',
+    explosion: ROCKET_EXPLOSION,
     hasLight: true,
 };
 
@@ -78,7 +80,7 @@ export const SPIT: ProjectileData = {
     selfGuidance: true,
     magnetic: false,
     damage: 25,
-    explosionSound: 'SpitExplosionSound',
+    explosion: SPIT_EXPLOSION,
     hasLight: false,
 };
 
