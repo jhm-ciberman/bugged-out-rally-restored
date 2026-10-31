@@ -3,21 +3,10 @@ import { assetUrl } from '../assets/AssetPaths';
 import { firstPrize, KILL_VALUE, placePrize } from '../game/Prizes';
 import type { Racer } from '../game/Race';
 import type { RaceSession } from '../game/RaceSession';
+import { TRACK_NAMES } from '../game/Tracks';
 import { bitmapButton, MEDIUM_TEXT, SAFARI_MEDIUM_TEXT } from './GuiControls';
 import { type GuiRect, placeControl } from './GuiLayout';
 import { formatRaceTime } from './Hud';
-
-/** Track names, from each mission's `MissionInfo`. */
-export const TRACK_NAMES = [
-    'Croaky Pond',
-    'Turtle Creek',
-    'Twin Peaks',
-    'Boomerang II',
-    'Snowbound',
-    'Ocean Side',
-    'Dunes II',
-    'Lunar',
-];
 
 const rel = (x: number, y: number, w: number, h: number): GuiRect => ({
     x,

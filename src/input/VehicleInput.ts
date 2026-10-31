@@ -1,10 +1,8 @@
+import { getSettings } from '../game/Settings';
 import type { VehicleMove } from '../vehicle/WheeledVehicle';
 
 /** Key that puts the car back at the last checkpoint. */
 const RESET_KEY = 'Enter';
-
-/** Mouse sensitivity of the restored install's saved prefs (the game's own default is 1). */
-const DEFAULT_MOUSE_SENSITIVITY = 0.2;
 
 /** Steering change per tick while an arrow key is held (`$pref::Input::KeyboardTurnSpeed`). */
 const KEYBOARD_TURN_SPEED = 0.1;
@@ -22,7 +20,7 @@ export class VehicleInput {
      * Mouse sensitivity multiplier (`$pref::Input::LinkMouseSensitivity`, 0.2 to 1 in the options menu).
      * Set it with `?mouse=` in the URL.
      */
-    sensitivity = mouseSensitivityFromUrl();
+    sensitivity = mouseSensitivityFromUrl() ?? getSettings().mouseSensitivity;
     private readonly _keys = new Set<string>();
     private _mouseYaw = 0;
     private _resetRequested = false;
@@ -135,10 +133,10 @@ export class VehicleInput {
 }
 
 /**
- * Reads `?mouse=` from the URL, clamped to the options menu range. Defaults to the low end,
- * which is what a played install had saved.
+ * Reads `?mouse=` from the URL, clamped to the options menu range, or `null` when it is not set.
  */
-function mouseSensitivityFromUrl(): number {
-    const value = Number(new URLSearchParams(window.location.search).get('mouse') ?? DEFAULT_MOUSE_SENSITIVITY);
-    return Number.isFinite(value) ? Math.min(1, Math.max(0.2, value)) : DEFAULT_MOUSE_SENSITIVITY;
+function mouseSensitivityFromUrl(): number | null {
+    const raw = new URLSearchParams(window.location.search).get('mouse');
+    const value = raw === null ? Number.NaN : Number(raw);
+    return Number.isFinite(value) ? Math.min(1, Math.max(0.2, value)) : null;
 }

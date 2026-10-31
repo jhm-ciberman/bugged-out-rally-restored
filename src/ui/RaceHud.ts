@@ -17,6 +17,9 @@ export class RaceHud {
     private _session: RaceSession | null = null;
 
     private _finish: FinishScreen | null = null;
+    private _finishTimer: ReturnType<typeof setTimeout> | null = null;
+    /** Called once when the player finishes the last lap. */
+    onPlayerFinished: (() => void) | null = null;
     private _refreshTimer = 0;
 
     constructor(
@@ -41,7 +44,9 @@ export class RaceHud {
             },
             onFinish: (racer) => {
                 // The scoreboard comes up 200 ms after the player's last lap (`onCycleExec`).
-                if (racer === this._session?.playerRacer) setTimeout(() => this._showFinish(), 200);
+                if (racer !== this._session?.playerRacer) return;
+                this.onPlayerFinished?.();
+                this._finishTimer = setTimeout(() => this._showFinish(), 200);
             },
             onCenterPrint: (racer, text) => {
                 if (racer === this._session?.playerRacer) this.hud.centerPrint(text);
@@ -99,6 +104,21 @@ export class RaceHud {
     resize(width: number, height: number): void {
         this.hud.resize(width, height);
         this._finish?.resize(width, height);
+    }
+
+    /** Whether the finish screen is up. */
+    get finished(): boolean {
+        return this._finish !== null;
+    }
+
+    /**
+     * Removes the HUD and the finish screen.
+     */
+    dispose(): void {
+        if (this._finishTimer) clearTimeout(this._finishTimer);
+        this._finish?.dispose();
+        this._finish = null;
+        this.hud.element.remove();
     }
 
     private _showFinish(): void {

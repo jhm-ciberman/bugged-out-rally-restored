@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { resolveTorqueFile } from '../assets/AssetPaths';
 import audio from '../game/data/audioProfiles.json';
+import { getSettings } from '../game/Settings';
 
 interface ProfileJson {
     fileName?: string;
@@ -13,10 +14,8 @@ interface DescriptionJson {
     is3D?: number;
     referenceDistance?: number;
     maxDistance?: number;
+    type?: string | number;
 }
-
-/** Default volume of every audio channel (`$pref::Audio::channelVolumeN`). */
-const CHANNEL_VOLUME = 0.8;
 
 /** Key that toggles mute. */
 const MUTE_KEY = 'KeyM';
@@ -45,9 +44,18 @@ export class AudioSystem {
     private readonly _buffers = new Map<string, Promise<AudioBuffer | null>>();
     private _music: THREE.Audio | null = null;
     private _muted = false;
+    /** Channel 1 (music and menu sounds) and channel 2 (world sounds), as in the options menu. */
+    private readonly _guiChannel: GainNode;
+    private readonly _simChannel: GainNode;
 
     constructor(camera: THREE.Camera) {
         camera.add(this.listener);
+        const context = this.listener.context;
+        this._guiChannel = context.createGain();
+        this._simChannel = context.createGain();
+        this._guiChannel.connect(this.listener.getInput());
+        this._simChannel.connect(this.listener.getInput());
+        this.applySettings();
         const resume = () => {
             void this.listener.context.resume();
         };
@@ -59,6 +67,15 @@ export class AudioSystem {
         // ?mute silences this page only, without changing the remembered setting.
         this._muted = new URLSearchParams(window.location.search).has('mute') || readStoredMute();
         this.listener.setMasterVolume(this._muted ? 0 : 1);
+    }
+
+    /**
+     * Applies the volume sliders of the options menu.
+     */
+    applySettings(): void {
+        const s = getSettings();
+        this._guiChannel.gain.value = s.musicVolume;
+        this._simChannel.gain.value = s.soundVolume;
     }
 
     /** Whether all sound is silenced. Toggled with the M key, remembered between visits. */
@@ -91,6 +108,7 @@ export class AudioSystem {
         const buffer = await this._buffer(profile);
         if (!buffer) return;
         const music = new THREE.Audio(this.listener);
+        this._route(music, profile);
         music.setBuffer(buffer);
         music.setLoop(true);
         music.setVolume(this._description(profile).volume);
@@ -115,6 +133,7 @@ export class AudioSystem {
         const buffer = await this._buffer(profile);
         if (!buffer) return;
         const sound = new THREE.Audio(this.listener);
+        this._route(sound, profile);
         sound.setBuffer(buffer);
         sound.setVolume(volume * this._description(profile).volume);
         sound.play();
@@ -159,13 +178,24 @@ export class AudioSystem {
         sound.setRefDistance(d.referenceDistance);
         sound.setMaxDistance(d.maxDistance);
         sound.setRolloffFactor(1);
+        this._route(sound, profile);
         return sound;
+    }
+
+    /**
+     * Sends a sound through the volume channel of its profile's description (`type`).
+     */
+    private _route(sound: THREE.Audio | THREE.PositionalAudio, profile: string): void {
+        const type = String(descriptions[profiles[profile]?.description ?? '']?.type ?? '');
+        const gui = type.includes('Gui') || type === '1';
+        sound.gain.disconnect();
+        sound.gain.connect(gui ? this._guiChannel : this._simChannel);
     }
 
     private _description(profile: string) {
         const d = descriptions[profiles[profile]?.description ?? ''] ?? {};
         return {
-            volume: (d.volume ?? 1) * CHANNEL_VOLUME,
+            volume: d.volume ?? 1,
             referenceDistance: d.referenceDistance ?? 1,
             maxDistance: d.maxDistance ?? 100,
         };
