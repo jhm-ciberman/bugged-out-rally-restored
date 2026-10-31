@@ -11,6 +11,7 @@ import { parseRotation, parseVector } from '../torque/TorqueMath';
 import { TICK_SECONDS, type VehicleMove } from '../vehicle/WheeledVehicle';
 import type { Track } from '../world/Track';
 import { Car } from './Car';
+import { Pickups } from './Pickups';
 import { Race, type RaceEvents, type Racer } from './Race';
 
 /** Most ticks run in one frame, so a long stall does not freeze the game catching up. */
@@ -46,6 +47,7 @@ export class RaceSession implements IUpdatable {
     readonly playerRacer: Racer;
     readonly cars: Car[] = [];
     readonly bots: Bot[] = [];
+    readonly pickups: Pickups;
     private _accumulator = 0;
     private _botsStarted = false;
 
@@ -57,6 +59,7 @@ export class RaceSession implements IUpdatable {
         events: RaceEvents,
     ) {
         this.race = new Race(track, events);
+        this.pickups = new Pickups(track.items);
         this.player = player;
         this.cars.push(player);
         this.playerRacer = this.race.addRacer('Player', player.vehicle);
@@ -143,6 +146,7 @@ export class RaceSession implements IUpdatable {
         this.player.tick(move);
         for (const bot of this.bots) bot.car.tick(racing ? bot.nextMove(TICK_SECONDS) : IDLE_MOVE);
 
+        this.pickups.tick(TICK_SECONDS, this.cars);
         this.race.tick(TICK_SECONDS);
     }
 }

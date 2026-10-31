@@ -42,6 +42,9 @@ export class RaceHud {
      */
     async attach(session: RaceSession, models: ModelLibrary): Promise<void> {
         this._session = session;
+        session.pickups.onPickup = ({ car, kind }) => {
+            if (car === session.player && kind !== 'health') void this._audio.play2d('AmmoPickupSound');
+        };
         await this._arrow.load(models);
     }
 
@@ -52,14 +55,14 @@ export class RaceHud {
         const racer = s.playerRacer;
         this.hud.update(
             {
-                health: 1,
+                health: s.player.health,
                 energy: v.data.maxEnergy > 0 ? v.energy / v.data.maxEnergy : 0,
                 speed: v.speed,
                 position: s.race.positionOf(racer),
                 lap: Math.min(racer.lap + 1, RACE_LAPS),
                 time: racer.finishTime ?? s.race.time,
-                rockets: 0,
-                bombs: 0,
+                rockets: s.player.rockets,
+                bombs: s.player.bombs,
             },
             deltaSeconds,
         );
