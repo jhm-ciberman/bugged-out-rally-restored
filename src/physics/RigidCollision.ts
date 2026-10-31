@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import type { Contact } from './CollisionWorld';
 import type { Rigid } from './Rigid';
 
-/** Most impulse passes per step, a safety net for the engine's open-ended loop. */
-const MAX_COLLISION_PASSES = 16;
+/** Impulse passes per step (`Vehicle::resolveCollision` in the exe stops after 5). */
+const MAX_COLLISION_PASSES = 5;
 
 const _r = new THREE.Vector3();
 const _v = new THREE.Vector3();
@@ -11,26 +11,17 @@ const _f = new THREE.Vector3();
 const _t = new THREE.Vector3();
 
 /**
- * Applies collision impulses for the contacts the body is moving into faster than `contactTol`
- * (`Vehicle::resolveCollision`). Returns whether any impulse was applied.
+ * Applies collision impulses for the contacts the body is moving into (`Vehicle::resolveCollision`
+ * as changed in the exe). Returns whether any impulse was applied.
  */
-export function resolveCollisions(
-    rigid: Rigid,
-    contacts: readonly Contact[],
-    tol: number,
-    contactTol: number,
-): boolean {
+export function resolveCollisions(rigid: Rigid, contacts: readonly Contact[], tol: number): boolean {
     let collided = false;
     for (let pass = 0; pass < MAX_COLLISION_PASSES; pass++) {
         let colliding = false;
         for (const c of contacts) {
             if (c.distance >= tol) continue;
-            rigid.getOriginVector(c.point, _r);
-            rigid.getVelocity(_r, _v);
-            if (_v.dot(c.normal) < -contactTol) {
-                rigid.resolveCollision(c.point, c.normal);
-                colliding = collided = true;
-            }
+            // The exe dropped stock's "approaching faster than contactTol" gate.
+            if (rigid.resolveCollision(c.point, c.normal)) colliding = collided = true;
         }
         if (!colliding) break;
     }

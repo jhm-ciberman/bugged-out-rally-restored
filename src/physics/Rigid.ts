@@ -5,6 +5,10 @@ const _a = new THREE.Vector3();
 const _b = new THREE.Vector3();
 const _m = new THREE.Matrix3();
 const _q = new THREE.Quaternion();
+/** Impulse factor of `Rigid::resolveCollision` in the exe (stock: 1 + restitution). */
+const EXE_BOUNCE = 1.1;
+/** Friction cap of `Rigid::resolveCollision` in the exe (stock: the body's friction). */
+const EXE_FRICTION = 0.3;
 
 /**
  * A rigid body integrated the way Torque's `Rigid` class does it (`game/rigid.cc`).
@@ -107,16 +111,17 @@ export class Rigid {
     /**
      * Pushes the body away from an immovable surface touched at world point `p`, with friction.
      *
-     * Does nothing when the point is already separating.
+     * Does nothing when the point is already separating. Returns whether an impulse was applied.
      */
-    resolveCollision(p: THREE.Vector3, normal: THREE.Vector3): void {
+    resolveCollision(p: THREE.Vector3, normal: THREE.Vector3): boolean {
         this.atRest = false;
         const r = this.getOriginVector(p, new THREE.Vector3());
         const v = this.getVelocity(r, new THREE.Vector3());
         const n = -v.dot(normal);
-        if (n < 0) return;
+        if (n < 0) return false;
 
-        let j = n * (1 + this.restitution) * this.getZeroImpulse(r, normal);
+        // The shipped exe uses fixed constants here instead of the body's restitution and friction.
+        let j = n * EXE_BOUNCE * this.getZeroImpulse(r, normal);
         const impulse = normal.clone().multiplyScalar(j);
 
         // Friction impulse: enough to stop the motion along the surface, capped by Coulomb friction.
@@ -125,11 +130,12 @@ export class Rigid {
         if (ul) {
             uv.divideScalar(-ul);
             let u = ul * this.getZeroImpulse(r, uv);
-            j *= this.friction;
+            j *= EXE_FRICTION;
             if (u > j) u = j;
             impulse.addScaledVector(uv, u);
         }
         this.applyImpulse(r, impulse);
+        return true;
     }
 
     /**

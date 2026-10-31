@@ -37,6 +37,17 @@ export interface WaterVolume {
 }
 
 /**
+ * A box that pushes cars or changes their grip (`PhysicalZone` in the exe). A centripetal zone swirls cars
+ * around its vertical axis instead of pushing them one way.
+ */
+export interface PhysicalZone {
+    readonly surfaceFriction: number;
+    contains(point: THREE.Vector3): boolean;
+    /** Adds this zone's force on an object at `point` to `force`. */
+    addForce(point: THREE.Vector3, force: THREE.Vector3): void;
+}
+
+/**
  * A moving solid that other bodies collide with as if it were fixed for the instant of contact,
  * like Torque vehicles treat each other.
  */
@@ -129,6 +140,25 @@ export class CollisionWorld {
     readonly obstacles: Obstacle[] = [];
     /** The track's water, if any. */
     water: WaterVolume | null = null;
+    /** The mission's gravity scale (`MissionArea.gravityMod`, 0 to 1). */
+    gravityMod = 1;
+    /** Zones that push cars or change tire grip (`PhysicalZone`). */
+    readonly zones: PhysicalZone[] = [];
+
+    /**
+     * Writes the total force of the zones containing `point` into `force` and returns the tire grip
+     * multiplier there (`ShapeBase::updateContainer` in the exe: the last zone's friction wins).
+     */
+    zoneEffects(point: THREE.Vector3, force: THREE.Vector3): number {
+        force.set(0, 0, 0);
+        let friction = 1;
+        for (const zone of this.zones) {
+            if (!zone.contains(point)) continue;
+            friction = zone.surfaceFriction;
+            zone.addForce(point, force);
+        }
+        return friction;
+    }
 
     /**
      * @param terrain The track terrain.

@@ -9,6 +9,7 @@ import { torqueFogUniforms } from '../render/TorqueFog';
 import { type MissionObject, parseMission, walkMission } from '../torque/MissionFile';
 import { parseTerrain } from '../torque/TerrainFile';
 import { parseColor, parseNumbers, parseRotation, parseVector } from '../torque/TorqueMath';
+import { PhysicalZoneVolume } from './PhysicalZoneVolume';
 import { SkyBox } from './SkyBox';
 import { TerrainHeightfield } from './TerrainHeightfield';
 import { bakeTerrainLightmap } from './TerrainLightmap';
@@ -108,6 +109,12 @@ export class Track implements IUpdatable {
         const shapeSolids = await Promise.all(objects.map((o) => placeCollision(o, models)));
         for (const solid of shapeSolids) if (solid) solids.push(solid);
         const collision = new CollisionWorld(terrain, solids);
+        // The exe scales vehicle gravity by MissionArea.gravityMod, clamped to 0..1 (Lunar uses 0.6).
+        const area = objects.find((o) => o.className === 'MissionArea');
+        collision.gravityMod = THREE.MathUtils.clamp(Number(area?.fields.get('gravitymod') ?? 1), 0, 1);
+        for (const o of objects) {
+            if (o.className === 'PhysicalZone') collision.zones.push(new PhysicalZoneVolume(o));
+        }
         if (waterObj) {
             const pos = parseVector(waterObj.fields.get('position'));
             const scale = parseVector(waterObj.fields.get('scale'), 1);

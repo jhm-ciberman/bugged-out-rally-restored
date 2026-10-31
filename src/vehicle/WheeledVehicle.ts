@@ -7,8 +7,31 @@ import type { VehicleData, WheelMount } from './VehicleData';
 /** Length of one simulation tick, in seconds (`TickSec`, 32 ms). */
 export const TICK_SECONDS = 0.032;
 
-/** Gravity used by wheeled vehicles (`sWheeledVehicleGravity`). */
-const GRAVITY = -20;
+/**
+ * Gravity of wheeled vehicles in the shipped exe, scaled by the mission's `gravityMod`
+ * (stock Torque uses -20; `WheeledVehicle::updateForces` in the exe uses -30).
+ */
+const GRAVITY = -30;
+/** How far above the spring mount the wheel ray starts, so a wheel can be pressed past full compression (exe). */
+const WHEEL_RAY_LIFT = 0.5;
+/** Most a spring can push, as a multiple of its rated force, when pressed past full compression (exe). */
+const MAX_SPRING_SCALE = 10;
+/** Scale on the tire deformation rates (exe constant 1/0.91). */
+const TIRE_RATE_SCALE = 1 / 0.91;
+/** Limit on tire deformation (exe). */
+const MAX_TIRE_DEFORMATION = 2;
+/** Body tilt (up axis height) below which the self-righting torque acts (exe). */
+const RIGHTING_TILT = 0.92;
+/** Strength of the self-righting torque (exe). */
+const RIGHTING_TORQUE = 90;
+/** Tilt below which the car counts as upside down, and the physics steps before it is kicked over (exe). */
+const FLIP_TILT = 0.2;
+const FLIP_STEPS = 140;
+/** Scale of `autoAlignForce`, which damps sideways and vertical body motion on the ground (exe). */
+const AUTO_ALIGN_SCALE = 75;
+/** Physics steps of being stuck (no momentum, or throttle below 5 m/s) before the car gives up (exe). */
+const STUCK_STEPS = 500;
+const STUCK_SPEED = 5;
 /** Fraction of the gravity energy below which a touching vehicle counts as resting (`sRestTol`). */
 const REST_TOLERANCE = 0.5;
 /** Consecutive resting sub-steps before the body goes to sleep (`sRestCount`). */
@@ -46,6 +69,8 @@ export interface WheelState {
     slipping: boolean;
     torqueScale: number;
     contact: boolean;
+    /** Extension without the lower clamp: negative when pressed past full compression. */
+    rawExtension: number;
     readonly contactNormal: THREE.Vector3;
     readonly contactPoint: THREE.Vector3;
 }
@@ -62,7 +87,6 @@ const _tireX = new THREE.Vector3();
 const _tireY = new THREE.Vector3();
 const _wheelX = new THREE.Vector3();
 const _end = new THREE.Vector3();
-const UP = new THREE.Vector3(0, 0, 1);
 const _box = new THREE.Box3();
 const _m = new THREE.Matrix4();
 const _one = new THREE.Vector3(1, 1, 1);
@@ -88,8 +112,20 @@ export class WheeledVehicle {
     /** Called when the body hits something harder than `minImpactSpeed`, with the change of velocity. */
     onImpact: ((velocityChange: THREE.Vector3) => void) | null = null;
 
+    /**
+     * Called when the car has been stuck too long or fell below the world (`onStuckOnZeroImpact`,
+     * which wrecks it in the scripts).
+     */
+    onStuck: (() => void) | null = null;
     /** Fraction of the body under water, 0 to 1. */
     waterCoverage = 0;
+    /** Tire grip multiplier from a physical zone such as ice (1 elsewhere). */
+    surfaceFriction = 1;
+    /** Force from the physical zones the car is in. */
+    readonly appliedForce = new THREE.Vector3();
+    private _stuckSteps = 0;
+    private _flipSteps = 0;
+    private _fallen = false;
     private _drag: number;
     private _buoyancy = 0;
     private _restCount = 0;
@@ -118,6 +154,7 @@ export class WheeledVehicle {
             slipping: false,
             torqueScale: 0,
             contact: false,
+            rawExtension: 1,
             contactNormal: new THREE.Vector3(0, 0, 1),
             contactPoint: new THREE.Vector3(),
         }));
@@ -132,6 +169,9 @@ export class WheeledVehicle {
         this.rigid.setAtRest();
         this.rigid.atRest = false;
         this.steering = 0;
+        this._fallen = false;
+        this._stuckSteps = 0;
+        this._flipSteps = 0;
         for (const w of this.wheels) {
             w.avel = 0;
             w.Dx = 0;
@@ -177,6 +217,7 @@ export class WheeledVehicle {
         this._drag = this.data.drag;
         this._buoyancy = 0;
         this.waterCoverage = 0;
+        this.surfaceFriction = this._world.zoneEffects(this.rigid.linPosition, this.appliedForce);
         const water = this._world.water;
         const p = this.rigid.linPosition;
         if (!water || p.x < water.min.x || p.x > water.max.x || p.y < water.min.y || p.y > water.max.y) return;
@@ -224,7 +265,7 @@ export class WheeledVehicle {
             collided = this._updateCollision(dt);
             if (this._contacts.length > 0) {
                 const k = r.getKineticEnergy();
-                const g = GRAVITY * dt;
+                const g = GRAVITY * this._world.gravityMod * dt;
                 const kg = 0.5 * r.mass * g * g;
                 if (k < REST_TOLERANCE * kg && ++this._restCount > REST_COUNT) r.setAtRest();
             } else {
@@ -249,20 +290,25 @@ export class WheeledVehicle {
         for (const w of this.wheels) {
             const { spring, tire } = w.mount;
             w.extension = 1;
-            const sp = _pos.copy(w.mount.position).applyQuaternion(r.angPosition).add(r.linPosition);
+            w.rawExtension = 1;
+            w.contact = false;
+            // The exe resets this every step, so tires always use static friction.
+            w.slipping = false;
+            // The ray starts above the mount, so the extension can go negative (exe).
+            _v.copy(w.mount.position);
+            _v.z += WHEEL_RAY_LIFT;
+            const sp = _pos.copy(_v).applyQuaternion(r.angPosition).add(r.linPosition);
             const vec = _v.set(0, 0, -spring.length).applyQuaternion(r.angPosition);
-            let ts = tire.radius / spring.length;
+            let ts = (tire.radius + WHEEL_RAY_LIFT) / spring.length;
             const ep = _end.copy(sp).addScaledVector(vec, 1 + ts);
             ts = ts / (1 + ts);
             const hit = this._world.castRay(sp, ep);
             if (hit) {
                 w.contact = true;
-                w.extension = hit.t < ts ? 0 : (hit.t - ts) / (1 - ts);
+                w.rawExtension = (hit.t - ts) / (1 - ts);
+                w.extension = hit.t < ts ? 0 : w.rawExtension;
                 w.contactNormal.copy(hit.normal);
                 w.contactPoint.copy(hit.point);
-            } else {
-                w.contact = false;
-                w.slipping = true;
             }
         }
     }
@@ -270,6 +316,14 @@ export class WheeledVehicle {
     private _updateForces(dt: number): void {
         this.extendWheels();
         const r = this.rigid;
+        const gravity = GRAVITY * this._world.gravityMod;
+
+        // Fell out of the world.
+        if (!this._fallen && r.linPosition.z < 0) {
+            this._fallen = true;
+            this.onStuck?.();
+            return;
+        }
         const data = this.data;
         const aMomentum = r.mass / this.wheels.length;
 
@@ -293,8 +347,20 @@ export class WheeledVehicle {
             brakeVel = (data.engineBrake / aMomentum) * dt;
         }
 
+        // Stuck: no momentum at all, or pressing the throttle without getting anywhere.
+        if (r.linMomentum.lengthSq() === 0 || (this.throttle !== 0 && r.linVelocity.length() < STUCK_SPEED)) {
+            if (this._stuckSteps++ > STUCK_STEPS) {
+                this._stuckSteps = 0;
+                this.onStuck?.();
+                return;
+            }
+        } else {
+            this._stuckSteps = 0;
+        }
+
         r.force.set(0, 0, 0);
         r.torque.set(0, 0, 0);
+        let contacts = 0;
 
         for (const w of this.wheels) {
             const { tire, spring } = w.mount;
@@ -304,16 +370,10 @@ export class WheeledVehicle {
                 r.getOriginVector(_pos, _r);
                 const localVel = r.getVelocity(_r, new THREE.Vector3());
 
-                const springForce = spring.force * (1 - w.extension);
-
-                if (w.extension === 0) {
-                    // Fully compressed: keep the body from sinking through the ground.
-                    const n = -localVel.dot(UP);
-                    if (n >= 0) {
-                        const j = n * (1 + r.restitution) * r.getZeroImpulse(_r, UP);
-                        r.force.addScaledVector(UP, j);
-                    }
-                }
+                contacts++;
+                // Pressed past full compression, the spring pushes harder, up to ten times (exe).
+                if (w.rawExtension < 0) w.rawExtension *= 2;
+                const springForce = spring.force * THREE.MathUtils.clamp(1 - w.rawExtension, 0, MAX_SPRING_SCALE);
 
                 let damping = spring.damping * -(_bz.dot(localVel) / spring.length);
                 if (damping < 0) damping = 0;
@@ -344,23 +404,29 @@ export class WheeledVehicle {
                 const yVelocity = _tireY.dot(wheelVelocity);
 
                 // Longitudinal tire deformation.
-                const ddy = w.avel * tire.radius - yVelocity - tire.longitudinalRelaxation * Math.abs(w.avel) * w.Dy;
-                w.Dy += ddy * dt;
-                Fy = tire.longitudinalForce * w.Dy + tire.longitudinalDamping * ddy;
+                const ddy =
+                    (w.avel * tire.radius - yVelocity - tire.longitudinalRelaxation * Math.abs(w.avel) * w.Dy) *
+                    TIRE_RATE_SCALE;
+                w.Dy = THREE.MathUtils.clamp(w.Dy + ddy * dt, -MAX_TIRE_DEFORMATION, MAX_TIRE_DEFORMATION);
+                Fy = clampForce(tire.longitudinalForce * w.Dy + tire.longitudinalDamping * ddy);
 
                 // Lateral tire deformation.
-                const ddx = xVelocity - tire.lateralRelaxation * Math.abs(w.avel) * w.Dx;
-                w.Dx += ddx * dt;
-                let Fx = -(tire.lateralForce * w.Dx + tire.lateralDamping * ddx);
+                const ddx = (xVelocity - tire.lateralRelaxation * Math.abs(w.avel) * w.Dx) * TIRE_RATE_SCALE;
+                w.Dx = THREE.MathUtils.clamp(w.Dx + ddx * dt, -MAX_TIRE_DEFORMATION, MAX_TIRE_DEFORMATION);
+                let Fx = clampForce(-(tire.lateralForce * w.Dx + tire.lateralDamping * ddx));
 
-                let verticalLoad = springForce + damping + antiSway;
-                if (verticalLoad < 0) verticalLoad = 0;
+                const verticalLoad = THREE.MathUtils.clamp(springForce + damping + antiSway, 0, MAX_FORCE);
 
-                // Friction circle.
-                const mu = w.slipping ? tire.kineticFriction : tire.staticFriction;
+                // Friction circle, with the grip of the ground under it (ice zones).
+                const mu = this.surfaceFriction * (w.slipping ? tire.kineticFriction : tire.staticFriction);
                 let Fn = verticalLoad * mu;
                 Fn *= Fn;
                 const Fw = Fx * Fx + Fy * Fy;
+                if (Fw > SANE_FORCE_SQ || Fn > SANE_FORCE_SQ) {
+                    Fy = 0;
+                    w.Dy = 0;
+                    w.Dx = 0;
+                }
                 if (Fw > Fn) {
                     const K = Math.sqrt(Fn / Fw);
                     Fy *= K;
@@ -401,16 +467,41 @@ export class WheeledVehicle {
 
         if (this.jetting) r.force.addScaledVector(_by, data.jetForce);
 
-        // Drag (buoyancy comes with water support).
         // Container drag and buoyancy (water).
-        r.force.z += -this._buoyancy * GRAVITY * r.mass;
+        r.force.z += -this._buoyancy * gravity * r.mass;
         r.force.addScaledVector(r.linVelocity, -this._drag);
         r.torque.addScaledVector(r.angMomentum, -this._drag);
 
+        // The exe adds gravity before the wake-up test, so the body always wakes.
+        r.force.z += gravity * r.mass;
         if (r.atRest && (r.force.lengthSq() > 0 || r.torque.lengthSq() > 0)) r.atRest = false;
 
-        r.force.z += GRAVITY * r.mass;
+        // Self-righting: turn the body's up axis toward world up when it tilts (exe).
+        if (_bz.z < RIGHTING_TILT) {
+            r.angMomentum.x += RIGHTING_TORQUE * (_bx.z * _by.x - _by.z * _bx.x);
+            r.angMomentum.y += RIGHTING_TORQUE * (_bx.z * _by.y - _by.z * _bx.y);
+        }
+        // Upside down for a while: kick it over (exe).
+        if (_bz.z < FLIP_TILT) {
+            if (this._flipSteps++ > FLIP_STEPS) {
+                const n = this._flipSteps;
+                r.angMomentum
+                    .copy(_bx)
+                    .multiplyScalar(n + 500)
+                    .addScaledVector(_by, n + 1000);
+            }
+        } else {
+            this._flipSteps = 0;
+        }
+        // autoAlignForce: damp sideways and body-vertical motion while on the ground (exe).
+        if (data.autoAlignForce > 0 && contacts > 1) {
+            const v = r.linVelocity;
+            const k = AUTO_ALIGN_SCALE * data.autoAlignForce;
+            r.force.addScaledVector(_bx, -k * _bx.dot(v)).addScaledVector(_bz, -k * _bz.dot(v));
+        }
 
+        // Physical zones push too (exe; stock wheeled vehicles ignore them).
+        r.force.add(this.appliedForce);
         r.linMomentum.addScaledVector(r.force, dt);
         r.angMomentum.addScaledVector(r.torque, dt);
         r.updateVelocity();
@@ -432,8 +523,17 @@ export class WheeledVehicle {
         }
         this._contacts.length = 0;
         this._world.findContacts(this._hullWorld, r.worldCenterOfMass, this.data.collisionTol, this._contacts, this);
-        const collided = resolveCollisions(r, this._contacts, this.data.collisionTol, this.data.contactTol);
+        const collided = resolveCollisions(r, this._contacts, this.data.collisionTol);
         resolveContacts(r, this._contacts, this.data.collisionTol, this.data.contactTol, dt);
         return collided;
     }
+}
+
+/** Limit on tire and load forces (exe). */
+const MAX_FORCE = 1e6;
+/** Squared force above which the tire state is reset as broken (exe). */
+const SANE_FORCE_SQ = 1e10;
+
+function clampForce(f: number): number {
+    return THREE.MathUtils.clamp(f, -MAX_FORCE, MAX_FORCE);
 }

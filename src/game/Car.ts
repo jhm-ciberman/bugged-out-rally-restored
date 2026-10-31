@@ -17,6 +17,8 @@ export interface DamageCause {
     readonly source: Car | null;
 }
 
+/** Damage dealt by the stuck callback (`onStuckOnZeroImpact`). */
+const STUCK_DAMAGE = 500;
 /** Energy a boost pad gives (`setBoostLevel(100)` in boostpad.cs). */
 const BOOST_LEVEL = 100;
 
@@ -60,6 +62,8 @@ export class Car {
         readonly view: VehicleView,
     ) {
         vehicle.onImpact = (change) => this._impact(change.length());
+        // `onStuckOnZeroImpact` in deathcar.cs: 500 damage, which wrecks any car.
+        vehicle.onStuck = () => this.applyDamage(STUCK_DAMAGE, { kind: 'impact', source: null });
         const hull = new THREE.Box3().setFromPoints([...vehicle.data.collisionHull]);
         this.obstacle = new BoxObstacle(vehicle, hull);
     }

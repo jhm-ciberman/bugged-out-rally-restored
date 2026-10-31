@@ -100,7 +100,7 @@ export class DynamicShape {
         }
         this._contacts.length = 0;
         this._world.findContacts(this._hullWorld, r.worldCenterOfMass, COLLISION_TOL, this._contacts, this);
-        resolveCollisions(r, this._contacts, COLLISION_TOL, CONTACT_TOL);
+        resolveCollisions(r, this._contacts, COLLISION_TOL);
         resolveContacts(r, this._contacts, COLLISION_TOL, CONTACT_TOL, dt);
         r.integrate(dt);
         this.obstacle.center.copy(r.linPosition);

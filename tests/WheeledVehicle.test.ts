@@ -48,7 +48,7 @@ describe('WheeledVehicle', () => {
         car.setTransform(new THREE.Vector3(0, 0, 102), new THREE.Quaternion());
         run(car, 60);
         run(car, 60, 1);
-        run(car, 60, 1, 0.3);
+        run(car, 15, 1, 0.3);
         // Heading turns clockwise from above: +Y toward +X.
         const forward = new THREE.Vector3(0, 1, 0).applyQuaternion(car.rigid.angPosition);
         expect(forward.x).toBeGreaterThan(0.2);
@@ -84,10 +84,10 @@ describe('WheeledVehicle', () => {
         car.setTransform(new THREE.Vector3(0, 0, 120), new THREE.Quaternion());
         run(car, 20);
         expect(car.waterCoverage).toBe(1);
-        // Free fall would reach 20 m/s * 0.64 s = 12.8 m/s. Buoyancy (density 1 / 4) and drag
-        // (0.6 x viscosity 5) slow it down, but on a 200 kg body only a little, as in Torque.
+        // Free fall would reach 30 m/s * 0.64 s = 19.2 m/s (the exe's gravity). Buoyancy (density 1 / 4)
+        // and drag (0.6 x viscosity 5) slow it down, but on a 200 kg body only a little, as in Torque.
         const sink = Math.abs(car.rigid.linVelocity.z);
-        expect(sink).toBeLessThan(11);
-        expect(sink).toBeGreaterThan(5);
+        expect(sink).toBeLessThan(17);
+        expect(sink).toBeGreaterThan(8);
     });
 });

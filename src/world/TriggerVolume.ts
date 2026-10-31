@@ -13,6 +13,7 @@ export class TriggerVolume {
     /** The trigger's forward axis in the world (`getForwardVector`). */
     readonly forward = new THREE.Vector3(0, 1, 0);
     private readonly _inverse = new THREE.Matrix4();
+    private readonly _world = new THREE.Matrix4();
     private readonly _box = new THREE.Box3();
 
     constructor(readonly mission: MissionObject) {
@@ -42,6 +43,7 @@ export class TriggerVolume {
             parseRotation(mission.fields.get('rotation')),
             parseVector(mission.fields.get('scale'), 1),
         );
+        this._world.copy(world);
         this._inverse.copy(world).invert();
         this.forward.applyQuaternion(parseRotation(mission.fields.get('rotation')));
     }
@@ -49,6 +51,13 @@ export class TriggerVolume {
     /** The trigger's name in the mission, such as `checkpoint3`. */
     get name(): string {
         return this.mission.name;
+    }
+
+    /**
+     * Writes the world position of the box's center into `out`.
+     */
+    center(out: THREE.Vector3): THREE.Vector3 {
+        return this._box.getCenter(out).applyMatrix4(this._world);
     }
 
     /**

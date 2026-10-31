@@ -68,6 +68,8 @@ export interface VehicleData {
     readonly maxEnergy: number;
     readonly jetEnergyDrain: number;
     readonly minJetEnergy: number;
+    /** Damping of sideways and vertical body motion on the ground (exe field; 0 for the first three bugs). */
+    readonly autoAlignForce: number;
     readonly maxDamage: number;
     readonly speedDamageScale: number;
     readonly minImpactSpeed: number;
@@ -224,6 +226,7 @@ export function getVehicleData(name: string): VehicleData {
         maxEnergy: num(block, 'maxEnergy', 0),
         jetEnergyDrain: num(block, 'jetEnergyDrain', 0.8),
         minJetEnergy: num(block, 'minJetEnergy', 1),
+        autoAlignForce: num(block, 'autoAlignForce', 0),
         maxDamage: num(block, 'maxDamage', 1),
         speedDamageScale: num(block, 'speedDamageScale', 0),
         minImpactSpeed: num(block, 'minImpactSpeed', 25),
