@@ -4,6 +4,7 @@ import type { Game, RaceResult } from './Game';
 import { CARS, type CarEntry } from './game/CarCatalog';
 import { firstPrize, KILL_VALUE, placePrize } from './game/Prizes';
 import { loadProfiles, newProfile, type Profile, recordResult } from './game/Profiles';
+import type { FinishChoice } from './ui/FinishScreen';
 import { buttonSounds } from './ui/GuiControls';
 import { AboutPage } from './ui/menus/AboutPage';
 import { IngameMenu } from './ui/menus/IngameMenu';
@@ -147,10 +148,8 @@ export class App {
                 winnings: plan.profile.points,
                 onProgress: (step, fraction) => loading.setProgress(step, fraction),
                 onFinished: (result) => this._award(plan, result),
-                onFinishChoice: (choice) => {
-                    if (choice.action === 'quit') this.mainMenu();
-                    else this._restart(choice.track);
-                },
+                onFinishChoice: (choice) => this._onFinishChoice(choice),
+                canRace: (track) => isTrackUnlocked(this._currentProfile(plan), plan.event, track - 1),
             });
         } catch (err) {
             console.error('Race failed to load', err);
@@ -163,10 +162,29 @@ export class App {
         this._setPage(null);
     }
 
+    private _onFinishChoice(choice: FinishChoice): void {
+        if (choice.action === 'options') {
+            this._options();
+        } else if (this._dialog) {
+            // Escape on the scoreboard while the options are open only closes them.
+            if (choice.action === 'quit') this._closeDialog();
+        } else if (choice.action === 'quit') {
+            this.mainMenu();
+        } else {
+            this._restart(choice.track);
+        }
+    }
+
+    /**
+     * Returns the saved copy of the plan's profile, which holds the winnings of races driven since it was made.
+     */
+    private _currentProfile(plan: RacePlan): Profile {
+        return loadProfiles().find((p) => p.name === plan.profile.name) ?? plan.profile;
+    }
+
     private _restart(track: number): void {
         if (!this._plan) return;
-        const profile = loadProfiles().find((p) => p.name === this._plan?.profile.name) ?? this._plan.profile;
-        void this._race({ ...this._plan, profile, track });
+        void this._race({ ...this._plan, profile: this._currentProfile(this._plan), track });
     }
 
     /**

@@ -5,7 +5,7 @@ import type { AudioSystem } from '../audio/AudioSystem';
 import { RACE_LAPS, type RaceEvents } from '../game/Race';
 import type { RaceSession } from '../game/RaceSession';
 import { DirectionArrow } from './DirectionArrow';
-import { type FinishChoice, FinishScreen } from './FinishScreen';
+import { type FinishActions, FinishScreen } from './FinishScreen';
 import { Hud } from './Hud';
 
 /**
@@ -27,7 +27,7 @@ export class RaceHud {
         private readonly _audio: AudioSystem,
         private readonly _event: RaceEvent,
         private readonly _trackNumber: number,
-        private readonly _onChoice: (choice: FinishChoice) => void,
+        private readonly _finishActions: FinishActions,
     ) {
         this.hud = new Hud(_parent);
         for (const p of ['AudioCountBeep', 'AudioGoBeep']) _audio.preload(p);
@@ -124,6 +124,12 @@ export class RaceHud {
     private _showFinish(): void {
         if (this._finish || !this._session) return;
         document.exitPointerLock();
-        this._finish = new FinishScreen(this._parent, this._session, this._event, this._trackNumber, this._onChoice);
+        this._finish = new FinishScreen(
+            this._parent,
+            this._session,
+            this._event,
+            this._trackNumber,
+            this._finishActions,
+        );
     }
 }

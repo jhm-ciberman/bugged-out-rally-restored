@@ -30,6 +30,8 @@ export interface RaceStart {
     readonly onFinished?: (result: RaceResult) => void;
     /** Called with the choice made on the finish screen. */
     readonly onFinishChoice: (choice: FinishChoice) => void;
+    /** Whether the player may race `track` (1 to 8) next, for the finish screen's track picker. */
+    readonly canRace: (track: number) => boolean;
     /** Reports loading steps and progress (0 to 1). */
     readonly onProgress?: (step: string, fraction: number) => void;
 }
@@ -108,7 +110,10 @@ export class Game {
         const track = await this._loadTrack(start.track);
         start.onProgress?.('LIGHTING MISSION', 0.7);
 
-        const hud = new RaceHud(this._container, this.audio, start.event, start.track, start.onFinishChoice);
+        const hud = new RaceHud(this._container, this.audio, start.event, start.track, {
+            onChoice: start.onFinishChoice,
+            canRace: start.canRace,
+        });
         const session = await RaceSession.create({
             track,
             models: this.models,

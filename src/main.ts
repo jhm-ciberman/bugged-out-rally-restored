@@ -3,7 +3,8 @@ import { Game } from './Game';
 import { parseVector } from './torque/TorqueMath';
 
 const ui = document.createElement('div');
-Object.assign(ui.style, { position: 'absolute', inset: '0', pointerEvents: 'none' });
+// Menus and dialogs draw above the race and its HUD.
+Object.assign(ui.style, { position: 'absolute', inset: '0', pointerEvents: 'none', zIndex: '10' });
 const game = new Game(document.body);
 document.body.append(ui);
 const app = new App(game, ui);

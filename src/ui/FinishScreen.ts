@@ -4,7 +4,7 @@ import { firstPrize, KILL_VALUE, placePrize } from '../game/Prizes';
 import type { Racer } from '../game/Race';
 import type { RaceSession } from '../game/RaceSession';
 import { TRACK_NAMES } from '../game/Tracks';
-import { bitmapButton, MEDIUM_TEXT, SAFARI_MEDIUM_TEXT } from './GuiControls';
+import { bitmapButton, MEDIUM_TEXT, SAFARI_MEDIUM_TEXT, setButtonEnabled } from './GuiControls';
 import { fitStage, type GuiRect, placeControl } from './GuiLayout';
 import { formatRaceTime } from './Hud';
 
@@ -28,7 +28,17 @@ const BAR = { x: 0, y: 475 };
 /**
  * What the player picked on the finish screen.
  */
-export type FinishChoice = { action: 'replay'; track: number } | { action: 'quit' };
+export type FinishChoice = { action: 'replay'; track: number } | { action: 'options' } | { action: 'quit' };
+
+/**
+ * What the finish screen reports to, and asks of, the game.
+ */
+export interface FinishActions {
+    /** Called with each choice the player makes. */
+    onChoice(choice: FinishChoice): void;
+    /** Whether the player may race `track` (1 to 8) next. */
+    canRace(track: number): boolean;
+}
 
 /**
  * The end-of-race scoreboard with its button bar (`finishGameGui.gui`): lap times, prize and kills per racer,
@@ -39,6 +49,7 @@ export class FinishScreen {
     private readonly _names: HTMLElement[] = [];
     private readonly _scores: HTMLElement[] = [];
     private readonly _venue = document.createElement('div');
+    private readonly _launch: HTMLButtonElement;
     private readonly _layout: { el: HTMLElement; rect: GuiRect }[] = [];
     /** The 4:3 area holding the scoreboard; the dimmed race shows around it on wide screens. */
     private readonly _stage = document.createElement('div');
@@ -52,7 +63,7 @@ export class FinishScreen {
         private readonly _session: RaceSession,
         private readonly _event: RaceEvent,
         trackNumber: number,
-        private readonly _onChoice: (choice: FinishChoice) => void,
+        private readonly _actions: FinishActions,
     ) {
         this._track = trackNumber - 1;
         this._raceTrack = trackNumber - 1;
@@ -82,19 +93,24 @@ export class FinishScreen {
 
         this._add(this._image('ingamegui_n.png'), rel(BAR.x, BAR.y, 800, 125));
         this._add(
-            bitmapButton('quit', () => this._onChoice({ action: 'quit' })),
+            bitmapButton('quit', () => this._actions.onChoice({ action: 'quit' })),
             rel(BAR.x + 650, BAR.y + 50, 95, 31),
         );
         this._add(
-            bitmapButton('launch', () => this._onChoice({ action: 'replay', track: this._track + 1 })),
-            rel(BAR.x + 114, BAR.y + 29, 95, 33),
+            bitmapButton('options', () => this._actions.onChoice({ action: 'options' })),
+            rel(BAR.x + 385, BAR.y + 50, 95, 31),
         );
+        this._launch = bitmapButton('launch', () =>
+            this._actions.onChoice({ action: 'replay', track: this._track + 1 }),
+        );
+        this._add(this._launch, rel(BAR.x + 114, BAR.y + 29, 95, 33));
+        // The arrows use `GuiDefaultProfile`, which has no button sounds.
         this._add(
-            bitmapButton('buttons/left', () => this._cycle(-1)),
+            bitmapButton('buttons/left', () => this._cycle(-1), { silent: true }),
             rel(BAR.x + 37, BAR.y + 71, 25, 27),
         );
         this._add(
-            bitmapButton('buttons/right', () => this._cycle(1)),
+            bitmapButton('buttons/right', () => this._cycle(1), { silent: true }),
             rel(BAR.x + 262, BAR.y + 71, 25, 27),
         );
         Object.assign(this._venue.style, { ...MEDIUM_TEXT, textAlign: 'center', whiteSpace: 'nowrap' });
@@ -149,6 +165,8 @@ export class FinishScreen {
     private _cycle(step: number): void {
         this._track = (this._track + step + TRACK_NAMES.length) % TRACK_NAMES.length;
         this._venue.textContent = TRACK_NAMES[this._track];
+        // Launch is greyed out on a locked track (`SetVenueText` with `isSelectedTrackValid`).
+        setButtonEnabled(this._launch, this._actions.canRace(this._track + 1), 'launch');
     }
 
     private _add(el: HTMLElement, rect: GuiRect): void {
@@ -171,7 +189,7 @@ export class FinishScreen {
 
     // Escape is the Quit button's accelerator.
     private readonly _onKey = (e: KeyboardEvent): void => {
-        if (e.code === 'Escape') this._onChoice({ action: 'quit' });
+        if (e.code === 'Escape') this._actions.onChoice({ action: 'quit' });
     };
 }
 
