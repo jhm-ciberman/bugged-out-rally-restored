@@ -32,6 +32,8 @@ export interface Racer {
     finishTime: number | null;
     /** Where the car crossed its last valid checkpoint, used to put it back on the track. */
     readonly lastCheckpoint: { position: THREE.Vector3; rotation: THREE.Quaternion };
+    /** Called when the racer crosses its next checkpoint in order. */
+    onCheckpoint: (() => void) | null;
     /** Triggers the car is inside, to raise enter events once. */
     readonly inside: Set<TriggerVolume>;
 }
@@ -131,6 +133,7 @@ export class Race {
                 position: vehicle.rigid.linPosition.clone(),
                 rotation: vehicle.rigid.angPosition.clone(),
             },
+            onCheckpoint: null,
             inside: new Set(),
         };
         this.racers.push(racer);
@@ -189,6 +192,7 @@ export class Race {
             this.events.onCenterPrint?.(racer, 'Checkpoint');
             racer.lastCheckpoint.position.copy(racer.vehicle.rigid.linPosition);
             racer.lastCheckpoint.rotation.copy(racer.vehicle.rigid.angPosition);
+            racer.onCheckpoint?.();
             if (trigger.field('islast') === '1') {
                 racer.lap++;
                 racer.lapTimes.push(this.time);

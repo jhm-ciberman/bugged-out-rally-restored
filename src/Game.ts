@@ -81,15 +81,18 @@ export class Game {
             this._entities.push(fly);
         } else {
             const hud = new RaceHud(this._container, this._audio);
-            const session = await RaceSession.create(
+            const event = params.get('event');
+            const session = await RaceSession.create({
                 track,
-                this._models,
-                params.get('car') ?? 'Cockroach',
-                this._camera,
-                this._renderer.domElement,
-                this._audio,
-                hud.events,
-            );
+                models: this._models,
+                carName: params.get('car') ?? 'Cockroach',
+                event: event === 'explore' || event === 'circuit' ? event : 'single',
+                winnings: Number(params.get('winnings') ?? 0),
+                camera: this._camera,
+                element: this._renderer.domElement,
+                audio: this._audio,
+                events: hud.events,
+            });
             await hud.attach(session, this._models);
             this._hud = hud;
             for (const car of session.cars) this._scene.add(car.view.object);
