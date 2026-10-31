@@ -7,6 +7,7 @@ import { FlyCamera } from './camera/FlyCamera';
 import { RaceSession } from './game/RaceSession';
 import { renderPixelRatio } from './game/Settings';
 import type { IUpdatable } from './IUpdatable';
+import { DEFAULT_FOV } from './input/VehicleInput';
 import { parseVector } from './torque/TorqueMath';
 import type { FinishChoice } from './ui/FinishScreen';
 import { RaceHud } from './ui/RaceHud';
@@ -63,9 +64,11 @@ export class Game {
     private _session: RaceSession | null = null;
     private _hud: RaceHud | null = null;
     private _fly: FlyCamera | null = null;
+    /** Horizontal field of view the camera shows, in degrees (Torque measures it across). */
+    private _fov = DEFAULT_FOV;
 
     constructor(private readonly _container: HTMLElement) {
-        this._camera = new THREE.PerspectiveCamera(verticalFov(this._aspect), this._aspect, 0.1, 2000);
+        this._camera = new THREE.PerspectiveCamera(verticalFov(this._aspect, DEFAULT_FOV), this._aspect, 0.1, 2000);
         this._camera.up.set(0, 0, 1);
         this.audio = new AudioSystem(this._camera);
 
@@ -200,6 +203,7 @@ export class Game {
         const dt = Math.min(this._timer.getDelta(), 0.1);
         if (!this._track) return;
         for (const entity of this._entities) entity.update(dt);
+        this._setFov(this._session?.cameraFov ?? DEFAULT_FOV);
         this._renderer.render(this._scene, this._camera);
         this._hud?.render(this._renderer, this._camera);
     };
@@ -211,10 +215,20 @@ export class Game {
         this._onResize();
     }
 
+    /**
+     * Sets the camera's horizontal field of view (`setFov`), in degrees.
+     */
+    private _setFov(horizontal: number): void {
+        if (horizontal === this._fov) return;
+        this._fov = horizontal;
+        this._camera.fov = verticalFov(this._aspect, horizontal);
+        this._camera.updateProjectionMatrix();
+    }
+
     private readonly _onResize = (): void => {
         this._renderer.setPixelRatio(renderPixelRatio());
         this._camera.aspect = this._aspect;
-        this._camera.fov = verticalFov(this._aspect);
+        this._camera.fov = verticalFov(this._aspect, this._fov);
         this._camera.updateProjectionMatrix();
         this._renderer.setSize(window.innerWidth, window.innerHeight);
         this._hud?.resize(window.innerWidth, window.innerHeight);
@@ -240,10 +254,10 @@ function disposeObject(root: THREE.Object3D): void {
     });
 }
 
-/** Torque's default field of view, measured horizontally (`$pref::Player::defaultFov`). */
-const HORIZONTAL_FOV = 90;
-
-function verticalFov(aspect: number): number {
-    const h = THREE.MathUtils.degToRad(HORIZONTAL_FOV);
+/**
+ * Returns the vertical field of view that shows `horizontal` degrees across a screen of `aspect`.
+ */
+function verticalFov(aspect: number, horizontal: number): number {
+    const h = THREE.MathUtils.degToRad(horizontal);
     return THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(h / 2) / aspect));
 }

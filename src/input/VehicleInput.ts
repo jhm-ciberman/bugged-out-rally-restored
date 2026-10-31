@@ -8,10 +8,14 @@ const RESET_KEY = 'Enter';
 const KEYBOARD_TURN_SPEED = 0.1;
 /** Steering change per pixel of mouse movement at a 90 degree field of view (`getMouseAdjustAmount`). */
 const MOUSE_TURN_PER_PIXEL = 0.01;
+/** Horizontal field of view, in degrees, without and with the zoom key (`defaultFov`, `CurrentFOV`). */
+export const DEFAULT_FOV = 90;
+const ZOOM_FOV = 45;
 
 /**
  * Turns keyboard and mouse input into vehicle moves, with the original bindings (`config.cs`):
- * W/Up drive, S/Down reverse, Space brakes, the mouse or Left/Right steer.
+ * W/Up drive, S/Down reverse, Space brakes, the mouse or Left/Right steer, E zooms while held and Tab
+ * switches between the chase and first person views.
  *
  * Steering is relative: the mouse and keys turn the wheel, and the vehicle lets it return to center.
  */
@@ -26,6 +30,7 @@ export class VehicleInput {
     private _resetRequested = false;
     private _rightMouse = false;
     private _leftMouse = false;
+    private _firstPerson = false;
 
     constructor(private readonly _element: HTMLElement) {
         _element.addEventListener('click', this._onClick);
@@ -37,6 +42,16 @@ export class VehicleInput {
         window.addEventListener('mouseup', this._onMouseButton);
         window.addEventListener('blur', this._onBlur);
         document.addEventListener('pointerlockchange', this._onBlur);
+    }
+
+    /** Whether the player picked the first person view (`$firstPerson`). */
+    get firstPerson(): boolean {
+        return this._firstPerson;
+    }
+
+    /** Horizontal field of view, in degrees, for the zoom key's state. */
+    get fov(): number {
+        return this._keys.has('KeyE') ? ZOOM_FOV : DEFAULT_FOV;
     }
 
     /**
@@ -118,13 +133,15 @@ export class VehicleInput {
 
     private readonly _onMouseMove = (e: MouseEvent): void => {
         if (document.pointerLockElement !== this._element) return;
-        this._mouseYaw += e.movementX * MOUSE_TURN_PER_PIXEL * this.sensitivity;
+        // A narrower view turns slower, so the aim moves the same on screen (`getMouseAdjustAmount`).
+        this._mouseYaw += e.movementX * MOUSE_TURN_PER_PIXEL * (this.fov / DEFAULT_FOV) * this.sensitivity;
     };
 
     private readonly _onKeyDown = (e: KeyboardEvent): void => {
         this._keys.add(e.code);
         if (e.code === RESET_KEY && !e.repeat) this._resetRequested = true;
-        if (e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
+        if (e.code === 'Tab' && !e.repeat) this._firstPerson = !this._firstPerson;
+        if (e.code === 'Space' || e.code === 'Tab' || e.code.startsWith('Arrow')) e.preventDefault();
     };
 
     private readonly _onKeyUp = (e: KeyboardEvent): void => {

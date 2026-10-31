@@ -87,6 +87,11 @@ export class RaceSession implements IUpdatable {
         this.playerRacer = this.race.addRacer('Player', player.vehicle);
     }
 
+    /** Horizontal field of view the player's camera asks for, in degrees. */
+    get cameraFov(): number {
+        return this._input.fov;
+    }
+
     /**
      * Sets up a race: the player on the first grid spot and the bots on the next ones.
      */
@@ -140,7 +145,13 @@ export class RaceSession implements IUpdatable {
         }
         this.combat.update(deltaSeconds, alpha);
         this.hazards.update();
-        this._chase.update(this.player.vehicle, this.player.renderPosition, this.player.renderRotation);
+        this._chase.update(
+            this.player.vehicle,
+            this.player.renderPosition,
+            this.player.renderRotation,
+            this._input.firstPerson,
+            deltaSeconds,
+        );
         this._chase.camera.position.add(this.combat.cameraShake(this._chase.camera.position));
     }
 
