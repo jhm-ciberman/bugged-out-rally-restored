@@ -1,6 +1,16 @@
 import * as THREE from 'three';
+import { useTorqueFog } from '../render/TorqueFog';
 import { TERRAIN_SIZE } from '../torque/TerrainFile';
 import { TerrainHeightfield } from './TerrainHeightfield';
+import { LIGHTMAP_SIZE } from './TerrainLightmap';
+
+/**
+ * Brightness multiplier on the terrain lightmap.
+ *
+ * The C blender in `blender.cc` doubles the lumel value, but the shipped build used the assembly
+ * blender, and doubling washes the tracks out to white. 1 keeps the textures readable.
+ */
+const LIGHTMAP_GAIN = 1;
 
 /** Most material layers a Torque terrain can have. */
 const MAX_LAYERS = 8;
@@ -13,10 +23,8 @@ export interface TerrainLook {
     readonly textures: readonly THREE.Texture[];
     /** World meters covered by one repeat of a material texture. */
     readonly textureMeters: number;
-    /** Direction the sunlight travels, normalized. */
-    readonly sunDirection: THREE.Vector3;
-    readonly sunColor: THREE.Color;
-    readonly ambientColor: THREE.Color;
+    /** The baked sun and shadow light, from {@link bakeTerrainLightmap}. */
+    readonly lightmap: THREE.Texture;
 }
 
 /**
@@ -122,68 +130,58 @@ function buildMaterial(field: TerrainHeightfield, look: TerrainLook): THREE.Shad
     placeholder.needsUpdate = true;
     while (textures.length < MAX_LAYERS) textures.push(placeholder);
 
-    return new THREE.ShaderMaterial({
-        fog: true,
-        uniforms: THREE.UniformsUtils.merge([
-            THREE.UniformsLib.fog,
-            {
-                weights0: { value: weightTextures[0] },
-                weights1: { value: weightTextures[1] },
-                layers: { value: textures },
-                layerCount: { value: layers.length },
-                // A texel half a sample in, so the weight of grid point i is read at its own vertex.
-                halfTexel: { value: 0.5 / TERRAIN_SIZE },
-                textureRepeat: { value: (TERRAIN_SIZE * field.squareSize) / look.textureMeters },
-                sunDirection: { value: look.sunDirection.clone() },
-                sunColor: { value: look.sunColor.clone() },
-                ambientColor: { value: look.ambientColor.clone() },
-            },
-        ]),
+    const material = new THREE.ShaderMaterial({
+        uniforms: {
+            weights0: { value: weightTextures[0] },
+            weights1: { value: weightTextures[1] },
+            layers: { value: textures },
+            lightmap: { value: look.lightmap },
+            // Half a texel, so each grid point reads its own weight and lumel.
+            weightOffset: { value: 0.5 / TERRAIN_SIZE },
+            lightmapOffset: { value: 0.5 / LIGHTMAP_SIZE },
+            textureRepeat: { value: (TERRAIN_SIZE * field.squareSize) / look.textureMeters },
+            lightmapGain: { value: LIGHTMAP_GAIN },
+        },
         vertexShader: /* glsl */ `
-      #include <fog_pars_vertex>
-      varying vec2 vUv;
-      varying vec3 vNormal;
-      void main() {
-        vUv = uv;
-        vNormal = normal;
-        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-        gl_Position = projectionMatrix * mvPosition;
-        #include <fog_vertex>
-      }
-    `,
+            #include <fog_pars_vertex>
+            varying vec2 vUv;
+            void main() {
+                vUv = uv;
+                vec3 transformed = position;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(transformed, 1.0);
+                #include <fog_vertex>
+            }
+        `,
         fragmentShader: /* glsl */ `
-      #include <fog_pars_fragment>
-      uniform sampler2D weights0;
-      uniform sampler2D weights1;
-      uniform sampler2D layers[${MAX_LAYERS}];
-      uniform int layerCount;
-      uniform float halfTexel;
-      uniform float textureRepeat;
-      uniform vec3 sunDirection;
-      uniform vec3 sunColor;
-      uniform vec3 ambientColor;
-      varying vec2 vUv;
-      varying vec3 vNormal;
-      void main() {
-        vec2 wuv = vUv + halfTexel;
-        vec4 w0 = texture2D(weights0, wuv);
-        vec4 w1 = texture2D(weights1, wuv);
-        vec2 tuv = vUv * textureRepeat;
-        vec3 color = texture2D(layers[0], tuv).rgb * w0.r
-                   + texture2D(layers[1], tuv).rgb * w0.g
-                   + texture2D(layers[2], tuv).rgb * w0.b
-                   + texture2D(layers[3], tuv).rgb * w0.a
-                   + texture2D(layers[4], tuv).rgb * w1.r
-                   + texture2D(layers[5], tuv).rgb * w1.g
-                   + texture2D(layers[6], tuv).rgb * w1.b
-                   + texture2D(layers[7], tuv).rgb * w1.a;
-        float total = dot(w0, vec4(1.0)) + dot(w1, vec4(1.0));
-        color /= max(total, 0.0001);
-        float diffuse = max(dot(normalize(vNormal), -sunDirection), 0.0);
-        vec3 light = min(ambientColor + sunColor * diffuse, vec3(1.0));
-        gl_FragColor = vec4(color * light, 1.0);
-        #include <fog_fragment>
-      }
-    `,
+            #include <fog_pars_fragment>
+            uniform sampler2D weights0;
+            uniform sampler2D weights1;
+            uniform sampler2D layers[${MAX_LAYERS}];
+            uniform sampler2D lightmap;
+            uniform float weightOffset;
+            uniform float lightmapOffset;
+            uniform float textureRepeat;
+            uniform float lightmapGain;
+            varying vec2 vUv;
+            void main() {
+                vec4 w0 = texture2D(weights0, vUv + weightOffset);
+                vec4 w1 = texture2D(weights1, vUv + weightOffset);
+                // The top row of a terrain texture lies on the south edge of its tile.
+                vec2 tuv = vec2(vUv.x, -vUv.y) * textureRepeat;
+                vec3 color = texture2D(layers[0], tuv).rgb * w0.r
+                           + texture2D(layers[1], tuv).rgb * w0.g
+                           + texture2D(layers[2], tuv).rgb * w0.b
+                           + texture2D(layers[3], tuv).rgb * w0.a
+                           + texture2D(layers[4], tuv).rgb * w1.r
+                           + texture2D(layers[5], tuv).rgb * w1.g
+                           + texture2D(layers[6], tuv).rgb * w1.b
+                           + texture2D(layers[7], tuv).rgb * w1.a;
+                color /= max(dot(w0, vec4(1.0)) + dot(w1, vec4(1.0)), 0.0001);
+                vec3 light = texture2D(lightmap, vUv + lightmapOffset).rgb * lightmapGain;
+                gl_FragColor = vec4(min(color * light, vec3(1.0)), 1.0);
+                #include <fog_fragment>
+            }
+        `,
     });
+    return useTorqueFog(material);
 }

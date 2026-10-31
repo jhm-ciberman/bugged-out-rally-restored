@@ -3,7 +3,7 @@ import { loadAssetManifest } from './assets/AssetPaths';
 import { ModelLibrary } from './assets/ModelLibrary';
 import { FlyCamera } from './camera/FlyCamera';
 import type { IUpdatable } from './IUpdatable';
-import { parseColor, parseVector } from './torque/TorqueMath';
+import { parseVector } from './torque/TorqueMath';
 import { Track } from './world/Track';
 
 // Torque blended colors without gamma correction. Keep every color in that same space.
@@ -46,23 +46,25 @@ export class Game {
      */
     async run(number = 1): Promise<void> {
         await loadAssetManifest();
-        const track = await Track.load(number, this._models);
+        const track = await Track.load(number, this._models, this._camera);
         this._track = track;
         this._scene.add(track.root);
-
-        const sky = track.objects.find((o) => o.className === 'Sky');
-        const fogColor = parseColor(sky?.fields.get('fogcolor'));
-        const visible = Number(sky?.fields.get('visibledistance') ?? 500);
-        const fogDistance = Number(sky?.fields.get('fogdistance') ?? 400);
-        this._scene.background = fogColor;
-        this._scene.fog = new THREE.Fog(fogColor, visible - fogDistance, visible);
-        this._camera.far = visible + 50;
+        this._entities.push(track);
+        this._camera.far = track.visibleDistance + 50;
         this._camera.updateProjectionMatrix();
 
         const fly = new FlyCamera(this._camera, this._renderer.domElement);
         const spawn = track.objects.find((o) => o.className === 'SpawnSphere');
         const start = parseVector(spawn?.fields.get('position'));
-        fly.lookFrom(start.clone().add(new THREE.Vector3(30, 30, 25)), start);
+        // Debug views: ?cam=x,y,z&look=x,y,z in Torque coordinates.
+        const params = new URLSearchParams(window.location.search);
+        const camParam = params.get('cam');
+        const lookParam = params.get('look');
+        if (camParam && lookParam) {
+            fly.lookFrom(parseVector(camParam.replace(/,/g, ' ')), parseVector(lookParam.replace(/,/g, ' ')));
+        } else {
+            fly.lookFrom(start.clone().add(new THREE.Vector3(30, 30, 25)), start);
+        }
         this._entities.push(fly);
 
         this._renderer.setAnimationLoop(this._tick);

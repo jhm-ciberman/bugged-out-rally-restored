@@ -43,6 +43,46 @@ export class TerrainHeightfield {
     }
 
     /**
+     * Writes the upward normal of the terrain triangle under a world position into `out`.
+     */
+    normalAt(worldX: number, worldY: number, out: { x: number; y: number; z: number }): void {
+        const xp0 = (worldX - this.originX) / this.squareSize;
+        const yp0 = (worldY - this.originY) / this.squareSize;
+        const x = Math.floor(xp0);
+        const y = Math.floor(yp0);
+        const xp = xp0 - x;
+        const yp = yp0 - y;
+        const bl = this.sample(x, y);
+        const br = this.sample(x + 1, y);
+        const tl = this.sample(x, y + 1);
+        const tr = this.sample(x + 1, y + 1);
+
+        // Slopes along X and Y of the triangle that contains the point.
+        let dx: number;
+        let dy: number;
+        if (TerrainHeightfield.isSplit45(x & MASK, y & MASK)) {
+            if (xp > yp) {
+                dx = br - bl;
+                dy = tr - br;
+            } else {
+                dx = tr - tl;
+                dy = tl - bl;
+            }
+        } else if (1 - xp > yp) {
+            dx = br - bl;
+            dy = tl - bl;
+        } else {
+            dx = tr - tl;
+            dy = tr - br;
+        }
+        const s = this.squareSize;
+        const len = Math.hypot(dx, dy, s);
+        out.x = -dx / len;
+        out.y = -dy / len;
+        out.z = s / len;
+    }
+
+    /**
      * Returns the terrain height at a world position (`TerrainBlock::getHeight`).
      */
     heightAt(worldX: number, worldY: number): number {

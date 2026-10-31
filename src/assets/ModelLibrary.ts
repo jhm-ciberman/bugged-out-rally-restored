@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { useTorqueFog } from '../render/TorqueFog';
 import { assetUrl } from './AssetPaths';
 
 /**
@@ -77,12 +78,14 @@ function prepareMesh(mesh: THREE.Mesh): void {
     const map = old.map;
     if (map) map.colorSpace = THREE.NoColorSpace;
     // Torque lit shapes with plain diffuse lighting, no specular.
-    mesh.material = new THREE.MeshLambertMaterial({
-        name: old.name,
-        map,
-        color: map ? 0xffffff : old.color,
-        alphaTest: 0.5,
-        side: THREE.DoubleSide,
-    });
+    mesh.material = useTorqueFog(
+        new THREE.MeshLambertMaterial({
+            name: old.name,
+            map,
+            color: map ? 0xffffff : old.color,
+            alphaTest: 0.5,
+            side: THREE.DoubleSide,
+        }),
+    );
     old.dispose();
 }

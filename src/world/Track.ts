@@ -2,16 +2,27 @@ import * as THREE from 'three';
 import { assetUrl, resolveTorqueFile } from '../assets/AssetPaths';
 import type { ModelLibrary } from '../assets/ModelLibrary';
 import { shapeForDatablock } from '../game/ShapeDatablocks';
+import type { IUpdatable } from '../IUpdatable';
+import { CollisionWorld } from '../physics/CollisionWorld';
+import { torqueFogUniforms } from '../render/TorqueFog';
 import { type MissionObject, parseMission, walkMission } from '../torque/MissionFile';
 import { parseTerrain } from '../torque/TerrainFile';
 import { parseColor, parseNumbers, parseRotation, parseVector } from '../torque/TorqueMath';
+import { SkyBox } from './SkyBox';
 import { TerrainHeightfield } from './TerrainHeightfield';
+import { bakeTerrainLightmap } from './TerrainLightmap';
 import { createTerrainObject } from './TerrainRenderer';
+import { WaterSurface } from './WaterSurface';
+
+/** Seconds per turn of a spinning item (`sRotationSpeed` in item.cc). */
+const ITEM_SPIN_SECONDS = 3;
 
 /**
  * A loaded race track: the mission objects, the terrain and the scene built from them.
  */
-export class Track {
+export class Track implements IUpdatable {
+    private _time = 0;
+
     private constructor(
         /** The track number, 1 to 8. */
         readonly number: number,
@@ -20,45 +31,76 @@ export class Track {
         readonly terrain: TerrainHeightfield,
         /** Everything drawn for the track, in Torque space. */
         readonly root: THREE.Group,
-        /** Direction the sunlight travels, normalized. */
-        readonly sunDirection: THREE.Vector3,
+        /** The solid surfaces vehicles collide with. */
+        readonly collision: CollisionWorld,
+        /** The sky's visible distance; nothing is drawn beyond it. */
+        readonly visibleDistance: number,
+        private readonly _sky: SkyBox | null,
+        private readonly _water: WaterSurface | null,
+        private readonly _spinners: readonly THREE.Object3D[],
     ) {}
 
     /**
-     * Downloads and builds track `number` (1 to 8).
+     * Downloads and builds track `number` (1 to 8), with the sky centered on `camera`.
      */
-    static async load(number: number, models: ModelLibrary): Promise<Track> {
+    static async load(number: number, models: ModelLibrary, camera: THREE.Camera): Promise<Track> {
         const misText = await (await fetch(assetUrl(`data/missions/track${number}.mis`))).text();
         const objects = [...walkMission(parseMission(misText))];
         const root = new THREE.Group();
         root.name = `track${number}`;
 
+        // Sun: the engine rebuilds the direction from azimuth and elevation (sun.cc).
         const sun = objects.find((o) => o.className === 'Sun');
-        const sunDirection = parseVector(sun?.fields.get('direction')).normalize();
-        const sunColor = parseColor(sun?.fields.get('color'));
-        const ambientColor = parseColor(sun?.fields.get('ambient'));
+        const azimuth = THREE.MathUtils.degToRad(Number(sun?.fields.get('azimuth') ?? 0));
+        const elevation = THREE.MathUtils.degToRad(Number(sun?.fields.get('elevation') ?? 35));
+        const toSun = new THREE.Vector3(
+            Math.sin(azimuth) * Math.cos(elevation),
+            Math.cos(azimuth) * Math.cos(elevation),
+            Math.sin(elevation),
+        );
+        const sunColor = parseColor(sun?.fields.get('color') ?? '0.7 0.7 0.7');
+        const ambientColor = parseColor(sun?.fields.get('ambient') ?? '0.3 0.3 0.3');
 
         const terrainObj = objects.find((o) => o.className === 'TerrainBlock');
         if (!terrainObj) throw new Error(`track${number}.mis has no TerrainBlock`);
         const terrain = await loadTerrain(terrainObj);
-        const textures = await Promise.all(terrain.file.materials.map((m) => loadTexture(m.textureName)));
-        root.add(
-            createTerrainObject(terrain, {
-                textures,
-                textureMeters: 64,
-                sunDirection,
-                sunColor,
-                ambientColor,
-            }),
-        );
+        const [textures, lightmap] = await Promise.all([
+            Promise.all(terrain.file.materials.map((m) => loadTexture(m.textureName))),
+            Promise.resolve().then(() => bakeTerrainLightmap(terrain, toSun.clone().negate(), sunColor, ambientColor)),
+        ]);
+        root.add(createTerrainObject(terrain, { textures, textureMeters: 64, lightmap }));
 
-        const sunLight = new THREE.DirectionalLight(sunColor, Math.PI);
-        sunLight.position.copy(sunDirection).multiplyScalar(-1000);
+        // Shapes and interiors: ambient plus a sun dimmed by the ambient brightness (sgLightingModel.cc).
+        const ambientLevel = (ambientColor.r + ambientColor.g + ambientColor.b) / 3;
+        const diffuse = sunColor.clone().multiplyScalar(THREE.MathUtils.clamp(1 - ambientLevel, 0, 1));
+        const sunLight = new THREE.DirectionalLight(diffuse, Math.PI);
+        sunLight.position.copy(toSun).multiplyScalar(1000);
         root.add(sunLight, sunLight.target);
         root.add(new THREE.AmbientLight(ambientColor, Math.PI));
 
-        await Promise.all(objects.map((o) => placeObject(o, models, root)));
-        return new Track(number, objects, terrain, root, sunDirection);
+        const skyObj = objects.find((o) => o.className === 'Sky');
+        const visibleDistance = Number(skyObj?.fields.get('visibledistance') ?? 500);
+        applyFog(skyObj);
+        const sky = skyObj ? await loadSky(skyObj, visibleDistance, camera) : null;
+        if (sky) root.add(sky.object);
+
+        const waterObj = objects.find((o) => o.className === 'WaterBlock');
+        const water = waterObj ? await loadWater(waterObj) : null;
+        if (water) root.add(water.object);
+
+        const placed = await Promise.all(objects.map((o) => placeObject(o, models)));
+        const solids: THREE.Object3D[] = [];
+        const spinners: THREE.Object3D[] = [];
+        for (const [i, model] of placed.entries()) {
+            if (!model) continue;
+            root.add(model);
+            const obj = objects[i];
+            if (obj.className === 'InteriorInstance') solids.push(model);
+            if (obj.className === 'Item' && obj.fields.get('rotate') === '1') spinners.push(model);
+        }
+        const collision = new CollisionWorld(terrain, solids);
+
+        return new Track(number, objects, terrain, root, collision, visibleDistance, sky, water, spinners);
     }
 
     /**
@@ -68,14 +110,61 @@ export class Track {
         const key = name.toLowerCase();
         return this.objects.find((o) => o.name.toLowerCase() === key);
     }
+
+    update(deltaSeconds: number): void {
+        this._time += deltaSeconds;
+        this._sky?.update();
+        this._water?.update(deltaSeconds);
+        const angle = (this._time / ITEM_SPIN_SECONDS) * Math.PI * 2;
+        for (const s of this._spinners) {
+            const base = s.userData.baseRotation as THREE.Quaternion;
+            s.quaternion
+                .copy(base)
+                .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), angle));
+        }
+    }
 }
 
 async function loadTerrain(obj: MissionObject): Promise<TerrainHeightfield> {
     const file = (obj.fields.get('terrainfile') ?? '').replace(/^\.\//, '');
     const buffer = await (await fetch(assetUrl(`data/missions/${file}`))).arrayBuffer();
-    const [ox, oy] = parseNumbers(obj.fields.get('position'), 2);
     const squareSize = Number(obj.fields.get('squaresize') ?? 8);
-    return new TerrainHeightfield(parseTerrain(buffer), ox, oy, squareSize);
+    // The engine ignores the mission position and centers the block on the origin (terrData.cc).
+    const origin = -squareSize * 128;
+    return new TerrainHeightfield(parseTerrain(buffer), origin, origin, squareSize);
+}
+
+function applyFog(sky: MissionObject | undefined): void {
+    const visible = Number(sky?.fields.get('visibledistance') ?? 500);
+    const fogDistance = Number(sky?.fields.get('fogdistance') ?? 400);
+    torqueFogUniforms.torqueFogColor.value.copy(parseColor(sky?.fields.get('fogcolor') ?? '0.8 0.8 0.8'));
+    torqueFogUniforms.torqueFogRange.value.set(fogDistance, visible);
+    const [volVisible, volMin, volMax] = parseNumbers(sky?.fields.get('fogvolume1'), 3);
+    torqueFogUniforms.torqueFogVolume.value.set(Math.max(volVisible, 0), volMin, volMax);
+}
+
+async function loadSky(obj: MissionObject, visibleDistance: number, camera: THREE.Camera): Promise<SkyBox | null> {
+    const dmlPath = obj.fields.get('materiallist');
+    const url = dmlPath ? resolveTorqueFile(dmlPath) : null;
+    if (!url) return null;
+    const names = (await (await fetch(url)).text()).split(/\r?\n/).filter((l) => l.trim() !== '');
+    const dir = (dmlPath ?? '').replace(/[^/]*$/, '');
+    const faces = await Promise.all(names.slice(0, 5).map((n) => loadTexture(dir + n.trim())));
+    return new SkyBox(faces, visibleDistance, camera);
+}
+
+async function loadWater(obj: MissionObject): Promise<WaterSurface> {
+    const pos = parseVector(obj.fields.get('position'));
+    const scale = parseVector(obj.fields.get('scale'), 1);
+    return new WaterSurface({
+        min: new THREE.Vector2(pos.x, pos.y),
+        size: new THREE.Vector2(scale.x, scale.y),
+        surfaceZ: pos.z + scale.z,
+        texture: await loadTexture(obj.fields.get('surfacetexture') ?? ''),
+        opacity: Number(obj.fields.get('surfaceopacity') ?? 0.5),
+        waveMagnitude: Number(obj.fields.get('wavemagnitude') ?? 1),
+        parallax: Number(obj.fields.get('surfaceparallax') ?? 0.5),
+    });
 }
 
 const textureLoader = new THREE.TextureLoader();
@@ -97,7 +186,7 @@ export async function loadTexture(torquePath: string): Promise<THREE.Texture> {
     return tex;
 }
 
-async function placeObject(obj: MissionObject, models: ModelLibrary, root: THREE.Group): Promise<void> {
+async function placeObject(obj: MissionObject, models: ModelLibrary): Promise<THREE.Object3D | null> {
     let shape: string | undefined;
     switch (obj.className) {
         case 'InteriorInstance':
@@ -111,18 +200,19 @@ async function placeObject(obj: MissionObject, models: ModelLibrary, root: THREE
             shape = shapeForDatablock(obj.fields.get('datablock') ?? '');
             break;
         default:
-            return;
+            return null;
     }
     if (!shape) {
         console.warn(`No shape for ${obj.className} ${obj.name} (${obj.fields.get('datablock')})`);
-        return;
+        return null;
     }
     const model = await models.instantiate(shape);
-    if (!model) return;
+    if (!model) return null;
     model.name = obj.name || obj.className;
     model.position.copy(parseVector(obj.fields.get('position')));
     model.quaternion.copy(parseRotation(obj.fields.get('rotation')));
     model.scale.copy(parseVector(obj.fields.get('scale'), 1));
     model.userData.mission = obj;
-    root.add(model);
+    model.userData.baseRotation = model.quaternion.clone();
+    return model;
 }
