@@ -4,15 +4,15 @@ let manifest: ReadonlySet<string> | null = null;
  * Downloads the list of shipped asset files. Call once before {@link resolveTorqueFile}.
  */
 export async function loadAssetManifest(): Promise<void> {
-  const res = await fetch(assetUrl("manifest.json"));
-  manifest = new Set<string>((await res.json()) as string[]);
+    const res = await fetch(assetUrl('manifest.json'));
+    manifest = new Set<string>((await res.json()) as string[]);
 }
 
 /**
  * Returns the URL of a file under `public/assets`, given its path relative to that folder.
  */
 export function assetUrl(relativePath: string): string {
-  return `${import.meta.env.BASE_URL}assets/${relativePath.toLowerCase()}`;
+    return `${import.meta.env.BASE_URL}assets/${relativePath.toLowerCase()}`;
 }
 
 /**
@@ -22,13 +22,16 @@ export function assetUrl(relativePath: string): string {
  * When the path has no extension, the extensions in `extensions` are tried in order,
  * like the engine does. Returns `null` when no file matches.
  */
-export function resolveTorqueFile(torquePath: string, extensions: readonly string[] = [".png", ".jpg"]): string | null {
-  if (!manifest) throw new Error("Asset manifest not loaded");
-  let path = torquePath.replace(/\\/g, "/").toLowerCase();
-  path = path.replace(/^~\//, "").replace(/^[a-z]+\/data\//, "data/").replace(/^(bor|safarirace)\//, "");
-  const candidates = /\.[a-z0-9]{2,4}$/.test(path) ? [path] : extensions.map((e) => path + e);
-  for (const c of candidates) {
-    if (manifest.has(c)) return assetUrl(c);
-  }
-  return null;
+export function resolveTorqueFile(torquePath: string, extensions: readonly string[] = ['.png', '.jpg']): string | null {
+    if (!manifest) throw new Error('Asset manifest not loaded');
+    let path = torquePath.replace(/\\/g, '/').toLowerCase();
+    path = path
+        .replace(/^~\//, '')
+        .replace(/^[a-z]+\/data\//, 'data/')
+        .replace(/^(bor|safarirace)\//, '');
+    const candidates = /\.[a-z0-9]{2,4}$/.test(path) ? [path] : extensions.map((e) => path + e);
+    for (const c of candidates) {
+        if (manifest.has(c)) return assetUrl(c);
+    }
+    return null;
 }
