@@ -1,0 +1,1960 @@
+//--- OBJECT WRITE BEGIN ---
+new SimGroup(MissionGroup) {
+      CTF_scoreLimit = "5";
+      musicTrack = "Track4Score";
+      cdTrack = "2";
+
+   new ScriptObject(MissionInfo) {
+         desc0 = "Dunes Raceway";
+         desc1 = "bor/client/ui/track7";
+         name = "Dunes II";
+   };
+   new MissionArea(MissionArea) {
+      area = "-1000 -1016 2048 2176";
+      flightCeiling = "300";
+      flightCeilingRange = "20";
+      gravityMod = "1";
+         locked = "true";
+   };
+   new Sky(Sky) {
+      position = "336 136 0";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      materialList = "~/data/skies/clrsky.dml";
+      cloudHeightPer[0] = "0.349971";
+      cloudHeightPer[1] = "0.3";
+      cloudHeightPer[2] = "0.199973";
+      cloudSpeed1 = "0.0005";
+      cloudSpeed2 = "0.001";
+      cloudSpeed3 = "0.0003";
+      visibleDistance = "500";
+      fogDistance = "200";
+      fogColor = "0.600000 0.500000 0.400000 0.400000";
+      fogStorm1 = "0";
+      fogStorm2 = "0";
+      fogStorm3 = "0";
+      fogVolume1 = "0 0 0";
+      fogVolume2 = "0 0 0";
+      fogVolume3 = "0 0 0";
+      fogVolumeColor1 = "128.000000 128.000000 128.000000 -222768174765569860000000000000000000000.000000";
+      fogVolumeColor2 = "128.000000 128.000000 128.000000 0.000000";
+      fogVolumeColor3 = "128.000000 128.000000 128.000000 -170698929442160050000000000000000000000.000000";
+      windVelocity = "1 1 0";
+      windEffectPrecipitation = "1";
+      SkySolidColor = "0.600000 0.600000 0.600000 1.000000";
+      useSkyTextures = "1";
+      renderBottomTexture = "0";
+      noRenderBans = "0";
+         locked = "true";
+   };
+   new Sun() {
+      azimuth = "240";
+      elevation = "60";
+      color = "0.888000 0.885000 0.780000 1.000000";
+      ambient = "0.750000 0.750000 0.700000 1.000000";
+         position = "0 0 0";
+         direction = "0.57735 0.57735 -0.57735";
+         rotation = "1 0 0 0";
+         scale = "1 1 1";
+         locked = "true";
+   };
+   new fxSunLight(sunflare1) {
+      position = "551.328 51.347 286.33";
+      rotation = "1 0 0 0";
+      scale = "2 2 2";
+      Enable = "1";
+      LocalFlareBitmap = "common/lighting/corona";
+      RemoteFlareBitmap = "common/lighting/corona";
+      SunAzimuth = "224";
+      SunElevation = "10";
+      LockToRealSun = "1";
+      FlareTP = "1";
+      Colour = "0.300000 0.100000 0.100000 1.000000";
+      Brightness = "2";
+      FlareSize = "2";
+      FadeTime = "0.1";
+      BlendMode = "0";
+      AnimColour = "0";
+      AnimBrightness = "1";
+      AnimRotation = "1";
+      AnimSize = "1";
+      AnimAzimuth = "0";
+      AnimElevation = "0";
+      LerpColour = "1";
+      LerpBrightness = "1";
+      LerpRotation = "1";
+      LerpSize = "1";
+      LerpAzimuth = "1";
+      LerpElevation = "1";
+      LinkFlareSize = "0";
+      SingleColourKeys = "1";
+      MinColour = "0.000000 0.000000 0.000000 1.000000";
+      MaxColour = "1.000000 1.000000 1.000000 1.000000";
+      MinBrightness = "0.4";
+      MaxBrightness = "1";
+      MinRotation = "0";
+      MaxRotation = "359";
+      minSize = "0.5";
+      MaxSize = "1";
+      MinAzimuth = "0";
+      MaxAzimuth = "359";
+      MinElevation = "-30";
+      MaxElevation = "210";
+      RedKeys = "AZA";
+      GreenKeys = "AZA";
+      BlueKeys = "AZA";
+      BrightnessKeys = "JAZJTAJ";
+      RotationKeys = "ZA";
+      SizeKeys = "ATAZA";
+      AzimuthKeys = "AZ";
+      ElevationKeys = "AZ";
+      ColourTime = "5";
+      BrightnessTime = "10";
+      RotationTime = "40";
+      SizeTime = "30";
+      AzimuthTime = "5";
+      ElevationTime = "5";
+   };
+   new fxSunLight(sunflare2) {
+      position = "545.923 49.749 287.492";
+      rotation = "1 0 0 0";
+      scale = "2 2 2";
+      Enable = "1";
+      LocalFlareBitmap = "common/lighting/corona";
+      RemoteFlareBitmap = "common/lighting/corona";
+      SunAzimuth = "224";
+      SunElevation = "10";
+      LockToRealSun = "1";
+      FlareTP = "1";
+      Colour = "2.000000 2.000000 0.000000 1.000000";
+      Brightness = "1";
+      FlareSize = "2.5";
+      FadeTime = "0.1";
+      BlendMode = "0";
+      AnimColour = "0";
+      AnimBrightness = "1";
+      AnimRotation = "1";
+      AnimSize = "1";
+      AnimAzimuth = "0";
+      AnimElevation = "0";
+      LerpColour = "1";
+      LerpBrightness = "1";
+      LerpRotation = "1";
+      LerpSize = "1";
+      LerpAzimuth = "1";
+      LerpElevation = "1";
+      LinkFlareSize = "0";
+      SingleColourKeys = "1";
+      MinColour = "0.000000 0.000000 0.000000 1.000000";
+      MaxColour = "1.000000 1.000000 1.000000 1.000000";
+      MinBrightness = "0.25";
+      MaxBrightness = "0.5";
+      MinRotation = "0";
+      MaxRotation = "359";
+      minSize = "0.5";
+      MaxSize = "1";
+      MinAzimuth = "0";
+      MaxAzimuth = "359";
+      MinElevation = "-30";
+      MaxElevation = "210";
+      RedKeys = "AZA";
+      GreenKeys = "AZA";
+      BlueKeys = "AZA";
+      BrightnessKeys = "AZJTA";
+      RotationKeys = "AZ";
+      SizeKeys = "ATAZA";
+      AzimuthKeys = "AZ";
+      ElevationKeys = "AZ";
+      ColourTime = "5";
+      BrightnessTime = "6";
+      RotationTime = "80";
+      SizeTime = "5";
+      AzimuthTime = "5";
+      ElevationTime = "5";
+   };
+   new TerrainBlock(Terrain) {
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      terrainFile = "./track7.ter";
+      squareSize = "8";
+      BlockShift = "1833264491";
+      bumpScale = "1";
+      bumpOffset = "0.01";
+      zeroBumpScale = "8";
+         position = "-1024 -1024 0";
+         locked = "true";
+   };
+   new SimGroup(PlayerDropPoints) {
+
+      new SpawnSphere() {
+         position = "512.588 -847.558 117.985";
+         rotation = "0.0326464 -0.0392176 0.998697 86.5925";
+         scale = "1 1 1";
+         dataBlock = "SpawnSphereMarker";
+         radius = "1";
+         sphereWeight = "100";
+         indoorWeight = "100";
+         outdoorWeight = "100";
+            homingCount = "0";
+            lockCount = "0";
+            locked = "false";
+      };
+      new SpawnSphere() {
+         position = "514.017 -831.984 117.924";
+         rotation = "0.03241 -0.0430076 0.998549 81.051";
+         scale = "1 1 1";
+         dataBlock = "SpawnSphereMarker";
+         radius = "1";
+         sphereWeight = "100";
+         indoorWeight = "100";
+         outdoorWeight = "100";
+      };
+      new SpawnSphere() {
+         position = "494.468 -828.455 117.643";
+         rotation = "0.0327353 -0.0377628 0.99875 88.8804";
+         scale = "1 1 1";
+         dataBlock = "SpawnSphereMarker";
+         radius = "1";
+         sphereWeight = "100";
+         indoorWeight = "100";
+         outdoorWeight = "100";
+      };
+      new SpawnSphere() {
+         position = "490.925 -844.044 118.024";
+         rotation = "0.0328862 -0.0353571 0.998833 92.8853";
+         scale = "1 1 1";
+         dataBlock = "SpawnSphereMarker";
+         radius = "1";
+         sphereWeight = "100";
+         indoorWeight = "100";
+         outdoorWeight = "100";
+      };
+      new SpawnSphere() {
+         position = "473.457 -842.633 117.011";
+         rotation = "0.0328862 -0.0353571 0.998833 92.8853";
+         scale = "1 1 1";
+         dataBlock = "SpawnSphereMarker";
+         radius = "1";
+         sphereWeight = "100";
+         indoorWeight = "100";
+         outdoorWeight = "100";
+      };
+      new SpawnSphere() {
+         position = "474.137 -826.649 117.431";
+         rotation = "0.0328862 -0.0353571 0.998833 92.8853";
+         scale = "1 1 1";
+         dataBlock = "SpawnSphereMarker";
+         radius = "1";
+         sphereWeight = "100";
+         indoorWeight = "100";
+         outdoorWeight = "100";
+      };
+      new SpawnSphere() {
+         position = "453.508 -842.996 117.415";
+         rotation = "0.0328862 -0.0353571 0.998833 92.8853";
+         scale = "1 1 1";
+         dataBlock = "SpawnSphereMarker";
+         radius = "1";
+         sphereWeight = "100";
+         indoorWeight = "100";
+         outdoorWeight = "100";
+      };
+      new SpawnSphere() {
+         position = "456.406 -826.322 117.484";
+         rotation = "0.0328862 -0.0353571 0.998833 92.8853";
+         scale = "1 1 1";
+         dataBlock = "SpawnSphereMarker";
+         radius = "1";
+         sphereWeight = "100";
+         indoorWeight = "100";
+         outdoorWeight = "100";
+      };
+   };
+   new SimGroup(CheckPtTriggers) {
+
+      new Trigger(checkpoint1) {
+         position = "625.782 -248.282 113.418";
+         rotation = "0 0 1 43.1537";
+         scale = "10 150 60";
+         dataBlock = "CheckPointTrigger";
+         polyhedron = "0.0000000 0.0000000 0.0000000 1.0000000 0.0000000 0.0000000 0.0000000 -1.0000000 0.0000000 0.0000000 0.0000000 1.0000000";
+            checkpoint = "1";
+      };
+      new Trigger(checkpoint2) {
+         position = "-0.940917 -487.573 111.429";
+         rotation = "0 0 1 43.1537";
+         scale = "10 150 60";
+         dataBlock = "CheckPointTrigger";
+         polyhedron = "0.0000000 0.0000000 0.0000000 1.0000000 0.0000000 0.0000000 0.0000000 -1.0000000 0.0000000 0.0000000 0.0000000 1.0000000";
+            checkpoint = "2";
+      };
+      new Trigger(checkpoint3) {
+         position = "857.695 33.494 103.769";
+         rotation = "0 0 1 86.1255";
+         scale = "10 150 60";
+         dataBlock = "CheckPointTrigger";
+         polyhedron = "0.0000000 0.0000000 0.0000000 1.0000000 0.0000000 0.0000000 0.0000000 -1.0000000 0.0000000 0.0000000 0.0000000 1.0000000";
+            checkpoint = "3";
+      };
+      new Trigger(checkpoint4) {
+         position = "-480.991 258.007 101.914";
+         rotation = "0 0 1 43.1537";
+         scale = "10 150 60";
+         dataBlock = "CheckPointTrigger";
+         polyhedron = "0.0000000 0.0000000 0.0000000 1.0000000 0.0000000 0.0000000 0.0000000 -1.0000000 0.0000000 0.0000000 0.0000000 1.0000000";
+            checkpoint = "4";
+      };
+      new Trigger(checkpoint5) {
+         position = "1058.84 798.812 111.896";
+         rotation = "0 0 1 87.2715";
+         scale = "10 150 60";
+         dataBlock = "CheckPointTrigger";
+         polyhedron = "0.0000000 0.0000000 0.0000000 1.0000000 0.0000000 0.0000000 0.0000000 -1.0000000 0.0000000 0.0000000 0.0000000 1.0000000";
+            checkpoint = "5";
+      };
+      new Trigger(checkpoint6) {
+         position = "-787.271 905.879 96.7609";
+         rotation = "0 0 1 124.514";
+         scale = "10 150 60";
+         dataBlock = "CheckPointTrigger";
+         polyhedron = "0.0000000 0.0000000 0.0000000 1.0000000 0.0000000 0.0000000 0.0000000 -1.0000000 0.0000000 0.0000000 0.0000000 1.0000000";
+            checkpoint = "6";
+      };
+      new Trigger(checkpoint7) {
+         position = "-874.309 -683.643 85";
+         rotation = "0 0 -1 3.82897";
+         scale = "10 150 60";
+         dataBlock = "CheckPointTrigger";
+         polyhedron = "0.0000000 0.0000000 0.0000000 1.0000000 0.0000000 0.0000000 0.0000000 -1.0000000 0.0000000 0.0000000 0.0000000 1.0000000";
+            checkpoint = "7";
+      };
+      new Trigger(checkpoint8) {
+         position = "533.428 -934.435 114.379";
+         rotation = "0 0 1 180.664";
+         scale = "90 150 60";
+         dataBlock = "CheckPointTrigger";
+         polyhedron = "0.0000000 0.0000000 0.0000000 1.0000000 0.0000000 0.0000000 0.0000000 -1.0000000 0.0000000 0.0000000 0.0000000 1.0000000";
+            isLast = "1";
+            checkpoint = "8";
+      };
+   };
+   new SimGroup(CheckPtOctohedrons) {
+
+      new SpawnSphere(checkpointmarker8) {
+         position = "513.56 -838.851 120.379";
+         rotation = "1 0 0 0";
+         scale = "1 1 1";
+         dataBlock = "SpawnSphereMarker";
+         radius = "2";
+         sphereWeight = "100";
+         indoorWeight = "100";
+         outdoorWeight = "100";
+      };
+      new SpawnSphere(checkpointmarker1) {
+         position = "582.182 -291.882 147.018";
+         rotation = "1 0 0 0";
+         scale = "1 1 1";
+         dataBlock = "SpawnSphereMarker";
+         radius = "2";
+         sphereWeight = "100";
+         indoorWeight = "100";
+         outdoorWeight = "100";
+      };
+      new SpawnSphere(checkpointmarker2) {
+         position = "-44.5409 -531.173 145.029";
+         rotation = "1 0 0 0";
+         scale = "1 1 1";
+         dataBlock = "SpawnSphereMarker";
+         radius = "2";
+         sphereWeight = "100";
+         indoorWeight = "100";
+         outdoorWeight = "100";
+      };
+      new SpawnSphere(checkpointmarker3) {
+         position = "762.516 36.636 139.169";
+         rotation = "0 0 -1 110.581";
+         scale = "1 1 1";
+         dataBlock = "SpawnSphereMarker";
+         radius = "2";
+         sphereWeight = "100";
+         indoorWeight = "100";
+         outdoorWeight = "100";
+      };
+      new SpawnSphere(checkpointmarker4) {
+         position = "-540.852 203.035 139.114";
+         rotation = "0 0 1 85.9437";
+         scale = "1 1 1";
+         dataBlock = "SpawnSphereMarker";
+         radius = "2";
+         sphereWeight = "100";
+         indoorWeight = "100";
+         outdoorWeight = "100";
+      };
+      new SpawnSphere(checkpointmarker5) {
+         position = "977.09 792.027 145.696";
+         rotation = "1 0 0 0";
+         scale = "1 1 1";
+         dataBlock = "SpawnSphereMarker";
+         radius = "2";
+         sphereWeight = "100";
+         indoorWeight = "100";
+         outdoorWeight = "100";
+      };
+      new SpawnSphere(checkpointmarker6) {
+         position = "-860.871 924.479 136.761";
+         rotation = "1 0 0 0";
+         scale = "1 1 1";
+         dataBlock = "SpawnSphereMarker";
+         radius = "2";
+         sphereWeight = "100";
+         indoorWeight = "100";
+         outdoorWeight = "100";
+      };
+      new SpawnSphere(checkpointmarker7) {
+         position = "-850.909 -745.243 124.6";
+         rotation = "1 0 0 0";
+         scale = "1 1 1";
+         dataBlock = "SpawnSphereMarker";
+         radius = "2";
+         sphereWeight = "100";
+         indoorWeight = "100";
+         outdoorWeight = "100";
+      };
+   };
+   new Item() {
+      position = "-888.467 286.473 118.661";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "BombAmmo";
+      collideable = "0";
+      static = "1";
+      rotate = "1";
+         isPlaying = "1";
+   };
+   new SimGroup(BoostTriggers) {
+   };
+   new SimGroup(SlowZoneTriggers) {
+   };
+   new Trigger(slowzone1) {
+      position = "-540.428 -467.208 106.431";
+      rotation = "-0.0932453 0.00324432 -0.995638 27.1192";
+      scale = "280 80 60";
+      dataBlock = "SlowZoneTrigger";
+      polyhedron = "0.0000000 0.0000000 0.0000000 1.0000000 0.0000000 0.0000000 0.0000000 -1.0000000 0.0000000 0.0000000 0.0000000 1.0000000";
+   };
+   new InteriorInstance() {
+      position = "-59.9591 -598.48 129.851";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      interiorFile = "~/data/bor/triplearrowsign.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new Trigger() {
+      position = "735.013 834.468 141.929";
+      rotation = "0.00727739 0.0313591 -0.999482 102.002";
+      scale = "32 20 15";
+      dataBlock = "BoostPadTrigger";
+      polyhedron = "0.0000000 0.0000000 0.0000000 1.0000000 0.0000000 0.0000000 0.0000000 -1.0000000 0.0000000 0.0000000 0.0000000 1.0000000";
+   };
+   new InteriorInstance() {
+      position = "-920.799 939.043 140.055";
+      rotation = "0 0 1 173.606";
+      scale = "1 1 1";
+      interiorFile = "~/data/bor/triplearrowsign.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new InteriorInstance() {
+      position = "608.373 -856.885 120.646";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      interiorFile = "~/data/bor/triplearrowsign.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new InteriorInstance() {
+      position = "867.182 507.338 128.176";
+      rotation = "0 0 -1 79.0682";
+      scale = "1 1 1";
+      interiorFile = "~/data/bor/triplearrowsign.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new SimGroup(Paths) {
+
+      new Path(Path1) {
+         isLooping = "0";
+
+         new Marker() {
+            position = "557.643 -812.43 122.828";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "1";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "582.643 -733.23 112.828";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "2";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "645.145 -519.573 112.074";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "3";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "643.471 -371.66 136.377";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "4";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "565.588 -281.495 147.323";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "5";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "434.062 -225.116 120.007";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "6";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "346.031 -277.823 146.95";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "7";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "193.183 -432.493 137.137";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "8";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "41.6252 -516.387 130.251";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "9";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "-42.9339 -487.725 134.949";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "10";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "-57.4489 -287.755 125.345";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "11";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "40.8273 -124.727 103.116";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "12";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "221.352 -35.1739 143.881";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "13";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "363.685 10.8073 145.286";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "14";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "608.691 -25.0146 135.82";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "15";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "700.474 -27.0938 132.208";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "16";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "737.595 33.1576 125.088";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "17";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "769.901 213.852 129.854";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "18";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "836.466 387.707 108.197";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "19";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "800.304 462.964 123.982";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "20";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "659.011 456.486 127.253";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "21";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "473.806 374.119 123.933";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "22";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "269.461 300.65 148.867";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "23";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "10.2197 208.013 131.831";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "24";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "-217.104 168.648 124.918";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "25";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "-431.474 161.447 131.914";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "26";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "-536.662 205.186 124.083";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "27";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "-549.293 283.83 147.999";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "28";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "-484.574 473.747 132.54";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "29";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "-403.364 538.62 146.603";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "30";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "-243.049 555.833 132.531";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "31";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "-38.725 486.476 124.232";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "32";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "124.278 500.651 148.789";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "33";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+      };
+      new Path(Path3) {
+         isLooping = "0";
+
+         new Marker() {
+            position = "435.04 587.257 144.335";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "1";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "688.215 618.48 146.506";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "2";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "906.053 649.928 123.62";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "3";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "953.818 729.723 123.657";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "4";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "955.728 828.87 148.564";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "5";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "888.827 865.748 154.536";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "6";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "672.604 848.322 158.696";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "7";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "337.908 865.436 126.947";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "8";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "33.2619 896.27 135.159";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "9";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "-193.806 897.487 176.502";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "10";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "-504.144 931.566 137.009";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "11";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "-672.03 913.527 155.734";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "12";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "-799.262 914.691 120.727";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "13";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "-835.114 867.469 114.436";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "14";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "-860.378 730.571 140.86";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "15";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "-867.178 512.024 119.733";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "16";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "-869.275 287.381 116.85";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "17";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "-872.3 72.3994 116.793";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "18";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "-881.471 -107.827 131.149";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "19";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "-888.433 -355.991 143.394";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "20";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "-919.901 -554.338 130.47";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "21";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "-908.792 -669.626 133.326";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "22";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "-821.658 -724.412 127.469";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "23";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "-618.695 -743.884 130.886";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "24";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "-434.192 -756.763 147.234";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "25";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "-142.311 -778.525 118.694";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "26";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "103.524 -794.486 140.979";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "27";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "400.643 -823.701 110.934";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "28";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+         new Marker() {
+            position = "500.471 -810.911 112.828";
+            rotation = "1 0 0 0";
+            scale = "1 1 1";
+            seqNum = "29";
+            type = "Normal";
+            msToNext = "1000";
+            smoothingType = "Spline";
+         };
+      };
+   };
+   new Trigger() {
+      position = "517.178 412.998 103.141";
+      rotation = "0.27261 -0.222955 0.935935 75.4308";
+      scale = "32 20 15";
+      dataBlock = "BoostPadTrigger";
+      polyhedron = "0.0000000 0.0000000 0.0000000 1.0000000 0.0000000 0.0000000 0.0000000 -1.0000000 0.0000000 0.0000000 0.0000000 1.0000000";
+   };
+   new StaticShape() {
+      position = "516.647 395.924 112.705";
+      rotation = "-0.0966536 -0.0972274 -0.990558 110.204";
+      scale = "3 2 2";
+      dataBlock = "BoostPad";
+         isPlaying = "1";
+   };
+   new Trigger() {
+      position = "-842.705 839.044 119.736";
+      rotation = "0.0243208 -0.021115 0.999481 173.646";
+      scale = "32 20 15";
+      dataBlock = "BoostPadTrigger";
+      polyhedron = "0.0000000 0.0000000 0.0000000 1.0000000 0.0000000 0.0000000 0.0000000 -1.0000000 0.0000000 0.0000000 0.0000000 1.0000000";
+   };
+   new StaticShape() {
+      position = "-67.548 496.05 121.568";
+      rotation = "-0.0204653 0.079975 0.996587 89.7598";
+      scale = "3 2 2";
+      dataBlock = "BoostPad";
+         isPlaying = "1";
+   };
+   new Item() {
+      position = "639.974 838.882 167.661";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "BombAmmo";
+      collideable = "0";
+      static = "1";
+      rotate = "1";
+         isPlaying = "1";
+         isTranslucent = "0";
+   };
+   new Item() {
+      position = "639.235 847.158 167.473";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "BombAmmo";
+      collideable = "0";
+      static = "1";
+      rotate = "1";
+         isPlaying = "1";
+         isTranslucent = "0";
+   };
+   new Item() {
+      position = "640.034 829.378 167.36";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "BombAmmo";
+      collideable = "0";
+      static = "1";
+      rotate = "1";
+         isPlaying = "1";
+         isTranslucent = "0";
+   };
+   new Item() {
+      position = "639.778 856.838 167.289";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "BombAmmo";
+      collideable = "0";
+      static = "1";
+      rotate = "1";
+         isPlaying = "1";
+         isTranslucent = "0";
+   };
+   new StaticShape() {
+      position = "-49.415 -262.689 125.526";
+      rotation = "0.992214 -0.124276 -0.00820355 9.23167";
+      scale = "3 2 2";
+      dataBlock = "BoostPad";
+         isPlaying = "1";
+   };
+   new Item() {
+      position = "-876.804 287.34 118.913";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "BombAmmo";
+      collideable = "0";
+      static = "1";
+      rotate = "1";
+         isPlaying = "1";
+   };
+   new InteriorInstance() {
+      position = "575.371 -893.67 119.061";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      interiorFile = "~/data/bor/triplearrowsign.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new InteriorInstance() {
+      position = "312.644 -238.406 153.506";
+      rotation = "0 0 1 214.286";
+      scale = "1 1 1";
+      interiorFile = "~/data/bor/triplearrowsign.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new InteriorInstance() {
+      position = "-125.921 -535.948 146.277";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      interiorFile = "~/data/bor/triplearrowsign.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new Trigger() {
+      position = "-56.5839 511.977 115.639";
+      rotation = "0.0336719 -0.0114295 0.999368 89.4311";
+      scale = "32 20 15";
+      dataBlock = "BoostPadTrigger";
+      polyhedron = "0.0000000 0.0000000 0.0000000 1.0000000 0.0000000 0.0000000 0.0000000 -1.0000000 0.0000000 0.0000000 0.0000000 1.0000000";
+   };
+   new StaticShape() {
+      position = "742.677 851.604 149.584";
+      rotation = "-0.133917 0.0676379 -0.988682 102.943";
+      scale = "3 2 2";
+      dataBlock = "BoostPad";
+         isPlaying = "1";
+   };
+   new Trigger() {
+      position = "-65.396 -254.806 113.109";
+      rotation = "0.998772 0.0486546 -0.00933266 25.5271";
+      scale = "32 20 15";
+      dataBlock = "BoostPadTrigger";
+      polyhedron = "0.0000000 0.0000000 0.0000000 1.0000000 0.0000000 0.0000000 0.0000000 -1.0000000 0.0000000 0.0000000 0.0000000 1.0000000";
+   };
+   new StaticShape() {
+      position = "-859.619 848.178 126.457";
+      rotation = "0.0708057 -0.000280902 0.99749 173.869";
+      scale = "3 2 2";
+      dataBlock = "BoostPad";
+         isPlaying = "1";
+   };
+   new InteriorInstance() {
+      position = "697.668 318.073 195.457";
+      rotation = "1.682e-008 1.66977e-009 1 102.559";
+      scale = "6 4 4";
+      interiorFile = "~/data/bor/fence5.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new Item() {
+      position = "-224.745 902.892 155.009";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "RocketAmmo";
+      collideable = "0";
+      static = "1";
+      rotate = "1";
+         isPlaying = "1";
+   };
+   new InteriorInstance() {
+      position = "171.642 -22.2254 146.893";
+      rotation = "0 0 1 79.0682";
+      scale = "1 1 1";
+      interiorFile = "~/data/bor/triplearrowsign.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new InteriorInstance() {
+      position = "368.243 72.6895 140.23";
+      rotation = "0 0 1 104.278";
+      scale = "1 1 1";
+      interiorFile = "~/data/bor/triplearrowsign.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new InteriorInstance() {
+      position = "-916.861 887.346 140.028";
+      rotation = "0 0 1 173.606";
+      scale = "1 1 1";
+      interiorFile = "~/data/bor/triplearrowsign.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new InteriorInstance() {
+      position = "-975.882 -758.792 122.435";
+      rotation = "0 0 1 93.3919";
+      scale = "1 1 1";
+      interiorFile = "~/data/bor/triplearrowsign.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new Item() {
+      position = "-748.008 -745.77 117.6";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "RocketAmmo";
+      collideable = "0";
+      static = "1";
+      rotate = "1";
+         isPlaying = "1";
+   };
+   new InteriorInstance() {
+      position = "1011.61 868.524 163.884";
+      rotation = "0 0 -1 91.6732";
+      scale = "1 1 1";
+      interiorFile = "~/data/bor/triplearrowsign.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new Item() {
+      position = "859.189 887.167 164.038";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "RocketAmmo";
+      collideable = "0";
+      static = "1";
+      rotate = "1";
+         isPlaying = "1";
+   };
+   new Item() {
+      position = "864.411 877.735 162.979";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "RocketAmmo";
+      collideable = "0";
+      static = "1";
+      rotate = "1";
+         isPlaying = "1";
+   };
+   new InteriorInstance() {
+      position = "362.803 278.414 166.322";
+      rotation = "0 0 -1 100.268";
+      scale = "1 1 1";
+      interiorFile = "~/data/bor/triplearrowsign.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new InteriorInstance() {
+      position = "694.471 268.88 197.755";
+      rotation = "-0.0299889 -0.0209954 0.99933 110.044";
+      scale = "6 4 4";
+      interiorFile = "~/data/bor/fence5.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new InteriorInstance() {
+      position = "-492.044 559.051 152.876";
+      rotation = "0 0 1 83.6518";
+      scale = "1 1 1";
+      interiorFile = "~/data/bor/triplearrowsign.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new InteriorInstance() {
+      position = "50.6613 428.445 162.863";
+      rotation = "0 0 1 61.8795";
+      scale = "1 1 1";
+      interiorFile = "~/data/bor/triplearrowsign.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new InteriorInstance() {
+      position = "-933.578 -786.913 117.446";
+      rotation = "0 0 1 93.3919";
+      scale = "1 1 1";
+      interiorFile = "~/data/bor/triplearrowsign.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new StaticShape() {
+      position = "-892.324 -403.693 116.411";
+      rotation = "0 0 1 181.065";
+      scale = "3 2 2";
+      dataBlock = "BoostPad";
+         isPlaying = "1";
+   };
+   new Trigger() {
+      position = "-876.698 -415.018 111.676";
+      rotation = "0.0107375 -0.0225986 0.999687 181.068";
+      scale = "32 20 15";
+      dataBlock = "BoostPadTrigger";
+      polyhedron = "0.0000000 0.0000000 0.0000000 1.0000000 0.0000000 0.0000000 0.0000000 -1.0000000 0.0000000 0.0000000 0.0000000 1.0000000";
+   };
+   new InteriorInstance() {
+      position = "642.666 812.237 164.806";
+      rotation = "0 0 -1 80.7871";
+      scale = "1 1 1";
+      interiorFile = "~/data/bor/triplearrowsign.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new InteriorInstance() {
+      position = "822.626 528.549 123.536";
+      rotation = "0 0 -1 88.9913";
+      scale = "1 1 1";
+      interiorFile = "~/data/bor/triplearrowsign.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new InteriorInstance() {
+      position = "669.599 -295.921 141.125";
+      rotation = "0 0 -1 54.4309";
+      scale = "1 1 1";
+      interiorFile = "~/data/bor/triplearrowsign.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new StaticShape() {
+      position = "33.0269 -780.44 115.122";
+      rotation = "0 0 1 91.6838";
+      scale = "3 2 2";
+      dataBlock = "BoostPad";
+         isPlaying = "1";
+   };
+   new Trigger() {
+      position = "44.5202 -764.938 110.187";
+      rotation = "0.0327814 -0.0118636 0.999392 91.7213";
+      scale = "32 20 15";
+      dataBlock = "BoostPadTrigger";
+      polyhedron = "0.0000000 0.0000000 0.0000000 1.0000000 0.0000000 0.0000000 0.0000000 -1.0000000 0.0000000 0.0000000 0.0000000 1.0000000";
+   };
+   new StaticShape() {
+      position = "-347.601 -758.773 115.122";
+      rotation = "0 0 1 90.5379";
+      scale = "3 2 2";
+      dataBlock = "BoostPad";
+         isPlaying = "1";
+   };
+   new Trigger() {
+      position = "-336.42 -743.043 110.187";
+      rotation = "0.0332222 -0.0116487 0.99938 90.5761";
+      scale = "32 20 15";
+      dataBlock = "BoostPadTrigger";
+      polyhedron = "0.0000000 0.0000000 0.0000000 1.0000000 0.0000000 0.0000000 0.0000000 -1.0000000 0.0000000 0.0000000 0.0000000 1.0000000";
+   };
+   new StaticShape() {
+      position = "-704.857 -747.651 115.322";
+      rotation = "0 0 1 90.5379";
+      scale = "3 2 2";
+      dataBlock = "BoostPad";
+         isPlaying = "1";
+   };
+   new Trigger() {
+      position = "-693.676 -731.922 110.387";
+      rotation = "0.0332222 -0.0116486 0.99938 90.576";
+      scale = "32 20 15";
+      dataBlock = "BoostPadTrigger";
+      polyhedron = "0.0000000 0.0000000 0.0000000 1.0000000 0.0000000 0.0000000 0.0000000 -1.0000000 0.0000000 0.0000000 0.0000000 1.0000000";
+   };
+   new StaticShape() {
+      position = "498.287 -349.357 140.187";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "Cactus";
+         isPlaying = "1";
+   };
+   new InteriorInstance() {
+      position = "510.215 -492.181 176.011";
+      rotation = "0 0 1 82.5059";
+      scale = "6 4 4";
+      interiorFile = "~/data/bor/fence5.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new StaticShape() {
+      position = "-2.74738 -468.397 150.623";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "Cactus";
+         isPlaying = "1";
+   };
+   new StaticShape() {
+      position = "706.076 44.0526 133.117";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "Cactus";
+         isPlaying = "1";
+   };
+   new StaticShape() {
+      position = "621.472 307.288 119.794";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "Cactus";
+         isPlaying = "1";
+   };
+   new StaticShape() {
+      position = "588.266 338.847 114.032";
+      rotation = "0 0 1 26.929";
+      scale = "1 1 1";
+      dataBlock = "Cactus";
+         isPlaying = "1";
+   };
+   new StaticShape() {
+      position = "-502.277 240.948 138.509";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "Cactus";
+         isPlaying = "1";
+   };
+   new StaticShape() {
+      position = "-465.683 383.228 155.777";
+      rotation = "0 0 1 71.0468";
+      scale = "1 1 1";
+      dataBlock = "Cactus";
+         isPlaying = "1";
+   };
+   new StaticShape() {
+      position = "-275.996 501.695 146.854";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "Cactus";
+         isPlaying = "1";
+   };
+   new StaticShape() {
+      position = "921.37 796.387 143.642";
+      rotation = "0 0 1 86.5166";
+      scale = "1 1 1";
+      dataBlock = "Cactus";
+         isPlaying = "1";
+   };
+   new StaticShape() {
+      position = "441.73 681.647 134.022";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "Cactus";
+         isPlaying = "1";
+   };
+   new StaticShape() {
+      position = "-817.583 890.333 131.668";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "Cactus";
+         isPlaying = "1";
+   };
+   new StaticShape() {
+      position = "-791.399 876.719 129.04";
+      rotation = "0 0 1 69.9009";
+      scale = "1 1 1";
+      dataBlock = "Cactus";
+         isPlaying = "1";
+   };
+   new InteriorInstance() {
+      position = "-857.396 -701.233 114.151";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      interiorFile = "~/data/bor/crate.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new InteriorInstance() {
+      position = "529.85 -775.514 114";
+      rotation = "0 0 -1 49.2744";
+      scale = "1 1 1";
+      interiorFile = "~/data/bor/crate.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new StaticShape() {
+      position = "536.916 -736.369 124";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "Cactus";
+         isPlaying = "1";
+   };
+   new InteriorInstance() {
+      position = "422.46 -259.037 187.624";
+      rotation = "0 0 1 63.0253";
+      scale = "6 4 4";
+      interiorFile = "~/data/bor/fence5.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new InteriorInstance() {
+      position = "474.725 -305.938 187.516";
+      rotation = "0 0 1 83.6518";
+      scale = "6 4 4";
+      interiorFile = "~/data/bor/fence5.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new InteriorInstance() {
+      position = "474.452 -355.824 181.481";
+      rotation = "0 0 1 80.214";
+      scale = "6 4 4";
+      interiorFile = "~/data/bor/fence5.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new InteriorInstance() {
+      position = "481.929 -403.048 177.106";
+      rotation = "0 0 1 80.214";
+      scale = "6 4 4";
+      interiorFile = "~/data/bor/fence5.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new InteriorInstance() {
+      position = "483.073 -456.088 177.844";
+      rotation = "0 0 1 71.0467";
+      scale = "6 4 4";
+      interiorFile = "~/data/bor/fence5.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new Item() {
+      position = "-748.008 -733.37 117.6";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "RocketAmmo";
+      collideable = "0";
+      static = "1";
+      rotate = "1";
+         isPlaying = "1";
+   };
+   new InteriorInstance() {
+      position = "639.117 282.717 182.948";
+      rotation = "-0.0647724 0.377336 -0.923809 21.0526";
+      scale = "6 4 4";
+      interiorFile = "~/data/bor/fence5.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new Item() {
+      position = "-748.008 -757.17 117.6";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "RocketAmmo";
+      collideable = "0";
+      static = "1";
+      rotate = "1";
+         isPlaying = "1";
+   };
+   new InteriorInstance() {
+      position = "-383.187 434.933 213.871";
+      rotation = "-0.0199775 -0.0459644 0.998743 47.0352";
+      scale = "6 4 4";
+      interiorFile = "~/data/bor/fence5.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new InteriorInstance() {
+      position = "-270.074 548.105 184.976";
+      rotation = "0.109064 0.0874928 0.990177 123.785";
+      scale = "6 4 4";
+      interiorFile = "~/data/bor/fence5.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new InteriorInstance() {
+      position = "495.786 -603.825 177.578";
+      rotation = "-0.0249864 -0.0296649 0.999248 80.2566";
+      scale = "6 4 4";
+      interiorFile = "~/data/bor/fence5.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new InteriorInstance() {
+      position = "540.2 -828.4 122.4";
+      rotation = "1 0 0 0";
+      scale = "1 1.6 1";
+      interiorFile = "~/data/bor/checkpointstart.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new InteriorInstance() {
+      position = "578.06 -283.294 140.486";
+      rotation = "0.00220738 0.00499997 0.999985 227.646";
+      scale = "1 1.6 1";
+      interiorFile = "~/data/bor/checkpoint.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new InteriorInstance() {
+      position = "-48.3719 -535.609 140.64";
+      rotation = "0 0 1 223.453";
+      scale = "1 2 1";
+      interiorFile = "~/data/bor/checkpoint.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new InteriorInstance() {
+      position = "764.072 42.3962 137.546";
+      rotation = "0 0 -1 96.257";
+      scale = "1 2 1";
+      interiorFile = "~/data/bor/checkpoint.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new InteriorInstance() {
+      position = "-543.156 200.647 137.21";
+      rotation = "0 0 1 217.333";
+      scale = "1 2 1";
+      interiorFile = "~/data/bor/checkpoint.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new InteriorInstance() {
+      position = "971.562 805.693 151.29";
+      rotation = "0 0 -1 89.9544";
+      scale = "1 2 1";
+      interiorFile = "~/data/bor/checkpoint.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new InteriorInstance() {
+      position = "-854.25 929.359 133.862";
+      rotation = "0.0229325 -0.0399787 0.998937 120.373";
+      scale = "1 2 1";
+      interiorFile = "~/data/bor/checkpoint.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new InteriorInstance() {
+      position = "-853.116 -746.915 121.438";
+      rotation = "0 0 1 0.573347";
+      scale = "1 2 1";
+      interiorFile = "~/data/bor/checkpoint.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new Item() {
+      position = "321.709 321.419 167.61";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "RocketAmmo";
+      collideable = "0";
+      static = "1";
+      rotate = "1";
+         isPlaying = "1";
+   };
+   new Item() {
+      position = "327.395 312.26 168.351";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "RocketAmmo";
+      collideable = "0";
+      static = "1";
+      rotate = "1";
+         isPlaying = "1";
+   };
+   new Item() {
+      position = "-61.1719 -399.363 156.856";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "RocketAmmo";
+      collideable = "0";
+      static = "1";
+      rotate = "1";
+         isPlaying = "1";
+   };
+   new Item() {
+      position = "-71.8389 -397.803 156.115";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "RocketAmmo";
+      collideable = "0";
+      static = "1";
+      rotate = "1";
+         isPlaying = "1";
+   };
+   new Item() {
+      position = "344.476 -298.819 151.53";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "RocketAmmo";
+      collideable = "0";
+      static = "1";
+      rotate = "1";
+         isPlaying = "1";
+   };
+   new Item() {
+      position = "336.128 -291.996 150.789";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "RocketAmmo";
+      collideable = "0";
+      static = "1";
+      rotate = "1";
+         isPlaying = "1";
+   };
+   new Item() {
+      position = "615.291 -657.925 117.6";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "RocketAmmo";
+      collideable = "0";
+      static = "1";
+      rotate = "1";
+         isPlaying = "1";
+   };
+   new Item() {
+      position = "604.624 -656.365 116.859";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "RocketAmmo";
+      collideable = "0";
+      static = "1";
+      rotate = "1";
+         isPlaying = "1";
+   };
+   new TSStatic() {
+      position = "58.4748 -859.305 128.284";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      shapeName = "~/data/shapes/trees/weeds.dts";
+      shadowDetail = "2";
+   };
+   new TSStatic() {
+      position = "-124.48 -845.581 128.102";
+      rotation = "0 0 1 93.9651";
+      scale = "1 1 1";
+      shapeName = "~/data/shapes/trees/weeds.dts";
+      shadowDetail = "2";
+   };
+   new TSStatic() {
+      position = "-331.436 -841.605 126.971";
+      rotation = "0 0 1 26.356";
+      scale = "1 1 1";
+      shapeName = "~/data/shapes/trees/weeds.dts";
+      shadowDetail = "2";
+   };
+   new TSStatic() {
+      position = "-500.169 -833.923 137.152";
+      rotation = "0 0 1 93.9651";
+      scale = "1 1 1";
+      shapeName = "~/data/shapes/trees/weeds.dts";
+      shadowDetail = "2";
+   };
+   new TSStatic() {
+      position = "234.928 -880.595 129.211";
+      rotation = "0 0 1 4.58349";
+      scale = "1 1 1";
+      shapeName = "~/data/shapes/trees/weeds.dts";
+      shadowDetail = "2";
+   };
+   new InteriorInstance() {
+      position = "654.43 145.698 203.827";
+      rotation = "-0.0795112 -0.100361 0.991769 77.2378";
+      scale = "6 4 4";
+      interiorFile = "~/data/bor/fence5.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new InteriorInstance() {
+      position = "641.614 205.662 192.957";
+      rotation = "0 0 1 76.7763";
+      scale = "6 4 4";
+      interiorFile = "~/data/bor/fence5.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new Item() {
+      position = "-540.054 411.972 132.436";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "BombAmmo";
+      collideable = "0";
+      static = "1";
+      rotate = "1";
+         isPlaying = "1";
+         isTranslucent = "0";
+   };
+   new Item() {
+      position = "-550.681 410.814 132.624";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "BombAmmo";
+      collideable = "0";
+      static = "1";
+      rotate = "1";
+         isPlaying = "1";
+         isTranslucent = "0";
+   };
+   new Item() {
+      position = "814.249 479.239 119.475";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "BombAmmo";
+      collideable = "0";
+      static = "1";
+      rotate = "1";
+         isPlaying = "1";
+         isTranslucent = "0";
+   };
+   new Item() {
+      position = "804.951 460.186 118.263";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "BombAmmo";
+      collideable = "0";
+      static = "1";
+      rotate = "1";
+         isPlaying = "1";
+         isTranslucent = "0";
+   };
+   new Item() {
+      position = "-184.47 -759.278 117.706";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "BombAmmo";
+      collideable = "0";
+      static = "1";
+      rotate = "1";
+         isPlaying = "1";
+         isTranslucent = "0";
+   };
+   new Item() {
+      position = "-183.731 -767.554 117.894";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "BombAmmo";
+      collideable = "0";
+      static = "1";
+      rotate = "1";
+         isPlaying = "1";
+         isTranslucent = "0";
+   };
+   new Item() {
+      position = "-888.326 -230.809 116.841";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "BombAmmo";
+      collideable = "0";
+      static = "1";
+      rotate = "1";
+         isPlaying = "1";
+         isTranslucent = "0";
+   };
+   new Item() {
+      position = "-880.044 -231.487 117.029";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "BombAmmo";
+      collideable = "0";
+      static = "1";
+      rotate = "1";
+         isPlaying = "1";
+         isTranslucent = "0";
+   };
+   new InteriorInstance() {
+      position = "738.224 696.458 180.989";
+      rotation = "-0.237102 -0.467988 0.851334 4.00113";
+      scale = "6 4 4";
+      interiorFile = "~/data/bor/fence5.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new InteriorInstance() {
+      position = "786.311 693.992 179.668";
+      rotation = "-0.237102 -0.467988 0.851334 4.00113";
+      scale = "6 4 4";
+      interiorFile = "~/data/bor/fence5.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new InteriorInstance() {
+      position = "698.105 697.199 202.657";
+      rotation = "-0.108887 -0.947243 0.301452 11.0469";
+      scale = "6 4 4";
+      interiorFile = "~/data/bor/fence5.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new InteriorInstance() {
+      position = "949.938 916.307 171.779";
+      rotation = "0 0 -1 91.6732";
+      scale = "1 1 1";
+      interiorFile = "~/data/bor/triplearrowsign.dif";
+      showTerrainInside = "0";
+      useAmbientLight = "0";
+   };
+   new Item() {
+      position = "-223.821 890.924 154.544";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "RocketAmmo";
+      collideable = "0";
+      static = "1";
+      rotate = "1";
+         isPlaying = "1";
+   };
+   new StaticShape() {
+      position = "-231.612 236.087 135.682";
+      rotation = "0 0 1 152.407";
+      scale = "1 1 1";
+      dataBlock = "Cactus";
+         isPlaying = "1";
+   };
+   new Item() {
+      position = "-884.195 -135.09 123.511";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "HealthKit";
+      collideable = "0";
+      static = "1";
+      rotate = "1";
+   };
+   new Item() {
+      position = "823.046 495.906 122.009";
+      rotation = "1 0 0 0";
+      scale = "1 1 1";
+      dataBlock = "HealthKit";
+      collideable = "0";
+      static = "1";
+      rotate = "1";
+   };
+};
+//--- OBJECT WRITE END ---
