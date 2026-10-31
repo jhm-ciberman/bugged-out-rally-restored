@@ -1,6 +1,13 @@
 import * as THREE from "three";
 import type { IUpdatable } from "./IUpdatable";
-import { SpinningCube } from "./entities/SpinningCube";
+import { loadAssetManifest } from "./assets/AssetPaths";
+import { ModelLibrary } from "./assets/ModelLibrary";
+import { FlyCamera } from "./camera/FlyCamera";
+import { parseColor, parseVector } from "./torque/TorqueMath";
+import { Track } from "./world/Track";
+
+// Torque blended colors without gamma correction. Keep every color in that same space.
+THREE.ColorManagement.enabled = false;
 
 /**
  * Owns the render loop, the three.js scene/camera/renderer, and every
@@ -13,29 +20,51 @@ export class Game {
   private readonly _renderer: THREE.WebGLRenderer;
   private readonly _timer = new THREE.Timer();
   private readonly _entities: IUpdatable[] = [];
+  private readonly _models = new ModelLibrary();
+  private _track: Track | null = null;
 
   constructor(private readonly _container: HTMLElement) {
-    this._scene.background = new THREE.Color(0x141418);
-
-    this._camera = new THREE.PerspectiveCamera(60, this._aspect, 0.1, 100);
-    this._camera.position.set(0, 1.2, 4);
-    this._camera.lookAt(0, 0, 0);
+    this._camera = new THREE.PerspectiveCamera(70, this._aspect, 0.1, 2000);
+    this._camera.up.set(0, 0, 1);
 
     this._renderer = new THREE.WebGLRenderer({ antialias: true });
+    this._renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
     this._renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this._renderer.setSize(window.innerWidth, window.innerHeight);
     this._container.appendChild(this._renderer.domElement);
 
-    this._addLights();
-    this._spawn(new SpinningCube(this._scene));
-
     window.addEventListener("resize", this._onResize);
   }
 
+  /** The loaded track, or `null` while loading. */
+  get track(): Track | null {
+    return this._track;
+  }
+
   /**
-   * Starts the per-frame loop.
+   * Loads track `number` and starts the per-frame loop.
    */
-  run(): void {
+  async run(number = 1): Promise<void> {
+    await loadAssetManifest();
+    const track = await Track.load(number, this._models);
+    this._track = track;
+    this._scene.add(track.root);
+
+    const sky = track.objects.find((o) => o.className === "Sky");
+    const fogColor = parseColor(sky?.fields.get("fogcolor"));
+    const visible = Number(sky?.fields.get("visibledistance") ?? 500);
+    const fogDistance = Number(sky?.fields.get("fogdistance") ?? 400);
+    this._scene.background = fogColor;
+    this._scene.fog = new THREE.Fog(fogColor, visible - fogDistance, visible);
+    this._camera.far = visible + 50;
+    this._camera.updateProjectionMatrix();
+
+    const fly = new FlyCamera(this._camera, this._renderer.domElement);
+    const spawn = track.objects.find((o) => o.className === "SpawnSphere");
+    const start = parseVector(spawn?.fields.get("position"));
+    fly.lookFrom(start.clone().add(new THREE.Vector3(30, 30, 25)), start);
+    this._entities.push(fly);
+
     this._renderer.setAnimationLoop(this._tick);
   }
 
@@ -48,20 +77,6 @@ export class Game {
     this._renderer.dispose();
   }
 
-  /**
-   * Registers an entity to be advanced every frame.
-   */
-  private _spawn(entity: IUpdatable): void {
-    this._entities.push(entity);
-  }
-
-  private _addLights(): void {
-    this._scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-    const key = new THREE.DirectionalLight(0xffffff, 1.6);
-    key.position.set(3, 5, 2);
-    this._scene.add(key);
-  }
-
   private get _aspect(): number {
     return window.innerWidth / window.innerHeight;
   }
@@ -69,7 +84,7 @@ export class Game {
   // Arrow fields so `this` stays bound when passed as callbacks.
   private readonly _tick = (): void => {
     this._timer.update();
-    const dt = this._timer.getDelta();
+    const dt = Math.min(this._timer.getDelta(), 0.1);
     for (const entity of this._entities) {
       entity.update(dt);
     }
