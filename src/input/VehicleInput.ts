@@ -1,5 +1,8 @@
 import type { VehicleMove } from '../vehicle/WheeledVehicle';
 
+/** Key that puts the car back at the last checkpoint. */
+const RESET_KEY = 'Enter';
+
 /** Steering change per tick while an arrow key is held (`$pref::Input::KeyboardTurnSpeed`). */
 const KEYBOARD_TURN_SPEED = 0.1;
 /** Steering change per pixel of mouse movement at a 90 degree field of view (`getMouseAdjustAmount`). */
@@ -16,6 +19,7 @@ export class VehicleInput {
     sensitivity = 1;
     private readonly _keys = new Set<string>();
     private _mouseYaw = 0;
+    private _resetRequested = false;
 
     constructor(private readonly _element: HTMLElement) {
         _element.addEventListener('click', this._onClick);
@@ -43,6 +47,15 @@ export class VehicleInput {
     }
 
     /**
+     * Returns whether the player asked to put the car back on the track since the last call.
+     */
+    consumeReset(): boolean {
+        const requested = this._resetRequested;
+        this._resetRequested = false;
+        return requested;
+    }
+
+    /**
      * Removes the input listeners.
      */
     dispose(): void {
@@ -63,6 +76,7 @@ export class VehicleInput {
 
     private readonly _onKeyDown = (e: KeyboardEvent): void => {
         this._keys.add(e.code);
+        if (e.code === RESET_KEY && !e.repeat) this._resetRequested = true;
         if (e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
     };
 

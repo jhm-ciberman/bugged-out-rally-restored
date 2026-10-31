@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import { loadAssetManifest } from './assets/AssetPaths';
 import { ModelLibrary } from './assets/ModelLibrary';
+import { AudioSystem } from './audio/AudioSystem';
 import { FlyCamera } from './camera/FlyCamera';
-import { PlayerCar } from './game/PlayerCar';
+import { RaceSession } from './game/RaceSession';
 import type { IUpdatable } from './IUpdatable';
-import { parseRotation, parseVector } from './torque/TorqueMath';
+import { parseVector } from './torque/TorqueMath';
 import { Track } from './world/Track';
 
 // Torque blended colors without gamma correction. Keep every color in that same space.
@@ -22,12 +23,14 @@ export class Game {
     private readonly _timer = new THREE.Timer();
     private readonly _entities: IUpdatable[] = [];
     private readonly _models = new ModelLibrary();
+    private readonly _audio: AudioSystem;
     private _track: Track | null = null;
-    private _player: PlayerCar | null = null;
+    private _session: RaceSession | null = null;
 
     constructor(private readonly _container: HTMLElement) {
         this._camera = new THREE.PerspectiveCamera(verticalFov(this._aspect), this._aspect, 0.1, 2000);
         this._camera.up.set(0, 0, 1);
+        this._audio = new AudioSystem(this._camera);
 
         this._renderer = new THREE.WebGLRenderer({ antialias: true });
         this._renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
@@ -38,9 +41,9 @@ export class Game {
         window.addEventListener('resize', this._onResize);
     }
 
-    /** The car the player drives, or `null` in fly mode or while loading. */
-    get player(): PlayerCar | null {
-        return this._player;
+    /** The running race, or `null` in fly mode or while loading. */
+    get session(): RaceSession | null {
+        return this._session;
     }
 
     /** The loaded track, or `null` while loading. */
@@ -75,18 +78,17 @@ export class Game {
             }
             this._entities.push(fly);
         } else {
-            const car = await PlayerCar.create(
-                params.get('car') ?? 'Cockroach',
+            const session = await RaceSession.create(
                 track,
                 this._models,
+                params.get('car') ?? 'Cockroach',
                 this._camera,
                 this._renderer.domElement,
-                start,
-                parseRotation(drop?.fields.get('rotation')),
+                this._audio,
             );
-            this._scene.add(car.view.object);
-            this._entities.push(car);
-            this._player = car;
+            for (const car of session.cars) this._scene.add(car.view.object);
+            this._entities.push(session);
+            this._session = session;
         }
 
         this._renderer.setAnimationLoop(this._tick);

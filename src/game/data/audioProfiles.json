@@ -1,0 +1,379 @@
+{
+    "profiles": {
+        "AudioButtonOver": {
+            "fileName": "~/data/sound/buttonover.ogg",
+            "description": "AudioGui",
+            "preload": 1.0
+        },
+        "AudioButtonDown": {
+            "fileName": "~/data/sound/buttonDown.ogg",
+            "description": "AudioGui",
+            "preload": 1.0
+        },
+        "AudioCountBeep": {
+            "fileName": "~/data/sound/beepo1.ogg",
+            "description": "AudioGui",
+            "preload": 1.0
+        },
+        "AudioGoBeep": {
+            "fileName": "~/data/sound/beepo2.ogg",
+            "description": "AudioGui",
+            "preload": 1.0
+        },
+        "GuiTheme": {
+            "fileName": "~/data/music/buggedout.ogg",
+            "description": "AudioTheme",
+            "preload": 1.0
+        },
+        "Track3Score": {
+            "fileName": "~/data/music/techno1.ogg",
+            "description": "AudioTheme",
+            "preload": 1.0
+        },
+        "Track2Score": {
+            "fileName": "~/data/music/deathchase.ogg",
+            "description": "AudioTheme",
+            "preload": 1.0
+        },
+        "Track1Score": {
+            "fileName": "~/data/music/technoFunk.ogg",
+            "description": "AudioTheme",
+            "preload": 1.0
+        },
+        "Track4Score": {
+            "fileName": "~/data/music/guitarRock.ogg",
+            "description": "AudioTheme",
+            "preload": 1.0
+        },
+        "Track5Score": {
+            "description": "AudioTheme",
+            "preload": 1.0
+        },
+        "Track6Score": {
+            "description": "AudioTheme",
+            "preload": 1.0
+        },
+        "Track8Score": {
+            "description": "AudioTheme",
+            "preload": 1.0
+        },
+        "takeme": {
+            "fileName": "~/data/sound/takeme.wav",
+            "description": "AudioDefaultLooping3d",
+            "preload": 0.0
+        },
+        "PondFrogs": {
+            "fileName": "~/data/sound/pondfrogs.ogg",
+            "description": "AudioDefaultLooping3d",
+            "preload": 0.0
+        },
+        "DustdevilSound": {
+            "fileName": "~/data/sound/dustdevil.ogg",
+            "description": "AudioDefaultLooping3d",
+            "preload": 0.0
+        },
+        "SeaSound": {
+            "fileName": "~/data/sound/seagulls.ogg",
+            "description": "AudioDefaultLooping3d",
+            "preload": 0.0
+        },
+        "VehicleExplosionSound": {
+            "fileName": "~/data/shapes/rocket/rocketexplosion.ogg",
+            "description": "AudioClose3d",
+            "preload": 1.0
+        },
+        "LiquidExplosionSound": {
+            "fileName": "~/data/sound/liquidimplosion.ogg",
+            "description": "AudioDefault3d",
+            "preload": 1.0
+        },
+        "VehicleEngineSound": {
+            "fileName": "~/data/sound/engineboost.ogg",
+            "description": "AudioCloseLooping3d",
+            "preload": 1.0
+        },
+        "VehicleSquealSound": {
+            "fileName": "~/data/sound/skidloud.ogg",
+            "description": "AudioCloseLooping3d",
+            "preload": 1.0
+        },
+        "VehicleJetBoostSound": {
+            "fileName": "~/data/sound/turbo.ogg",
+            "description": "AudioCloseLooping3d",
+            "preload": 1.0
+        },
+        "PorcheEngineSound": {
+            "fileName": "~/data/sound/porche.ogg",
+            "description": "AudioCloseLooping3d",
+            "preload": 1.0
+        },
+        "PorcheJetBoostSound": {
+            "fileName": "~/data/sound/porcheboost.ogg",
+            "description": "AudioCloseLooping3d",
+            "preload": 1.0
+        },
+        "PulserEngineSound": {
+            "fileName": "~/data/sound/pulser.ogg",
+            "description": "AudioCloseLooping3d",
+            "preload": 1.0
+        },
+        "PulserJetBoostSound": {
+            "fileName": "~/data/sound/pulserboost.ogg",
+            "description": "AudioCloseLooping3d",
+            "preload": 1.0
+        },
+        "DragsterEngineSound": {
+            "fileName": "~/data/sound/dragster.ogg",
+            "description": "AudioCloseLooping3d",
+            "preload": 1.0
+        },
+        "DragsterJetBoostSound": {
+            "fileName": "~/data/sound/dragsterboost.ogg",
+            "description": "AudioCloseLooping3d",
+            "preload": 1.0
+        },
+        "TruckEngineSound": {
+            "fileName": "~/data/sound/truck.ogg",
+            "description": "AudioCloseLooping3d",
+            "preload": 1.0
+        },
+        "TruckJetBoostSound": {
+            "fileName": "~/data/sound/truckboost.ogg",
+            "description": "AudioCloseLooping3d",
+            "preload": 1.0
+        },
+        "VehLowImpactSound": {
+            "fileName": "~/data/sound/lowimpact2.ogg",
+            "description": "AudioDefault3d",
+            "preload": 1.0
+        },
+        "VehHighImpactSound": {
+            "fileName": "~/data/sound/highimpact2.ogg",
+            "description": "AudioDefault3d",
+            "preload": 1.0
+        },
+        "TireImpactSound": {
+            "fileName": "~/data/sound/wheelimpact.ogg",
+            "description": "AudioDefault3d",
+            "preload": 1.0
+        },
+        "LightSplashSound": {
+            "fileName": "~/data/sound/lightsplash.ogg",
+            "description": "AudioClose3d",
+            "preload": 1.0
+        },
+        "ExitSplashSound": {
+            "fileName": "~/data/sound/medsplash.ogg",
+            "description": "AudioClose3d",
+            "preload": 1.0
+        },
+        "MedSplashSound": {
+            "fileName": "~/data/sound/hardsplash.ogg",
+            "description": "AudioClose3d",
+            "preload": 1.0
+        },
+        "HardSplashSound": {
+            "fileName": "~/data/sound/bigsplash.ogg",
+            "description": "AudioClose3d",
+            "preload": 1.0
+        },
+        "BubbleSound": {
+            "fileName": "~/data/sound/shotbubble.ogg",
+            "description": "AudioClose3d",
+            "preload": 1.0
+        },
+        "VehTargetedSound": {
+            "fileName": "~/data/sound/targeted2.ogg",
+            "description": "AudioCloseLooping3d",
+            "preload": 1.0
+        },
+        "VehTargetDummy": {
+            "description": "AudioCloseLooping3d",
+            "preload": 1.0
+        },
+        "SpitFireSound": {
+            "fileName": "~/data/sound/crossbow_firing.ogg",
+            "description": "AudioClose3d",
+            "preload": 1.0
+        },
+        "SpitExplosionSound": {
+            "fileName": "~/data/sound/frogspit.ogg",
+            "description": "AudioDefault3d",
+            "preload": 1.0
+        },
+        "BoulderLowImpactSound": {
+            "fileName": "~/data/sound/lowimpact2.ogg",
+            "description": "AudioDefault3d",
+            "preload": 1.0
+        },
+        "BoulderHighImpactSound": {
+            "fileName": "~/data/sound/highimpact2.ogg",
+            "description": "AudioDefault3d",
+            "preload": 1.0
+        },
+        "WeaponUseSound": {
+            "fileName": "~/data/sound/weapon_switch.wav",
+            "description": "AudioClose3d",
+            "preload": 1.0
+        },
+        "WeaponPickupSound": {
+            "fileName": "~/data/sound/weapon_pickup.wav",
+            "description": "AudioClose3d",
+            "preload": 1.0
+        },
+        "AmmoPickupSound": {
+            "fileName": "~/data/sound/ammo_pickup.wav",
+            "description": "AudioClose3d",
+            "preload": 1.0
+        },
+        "RocketExplosionSound": {
+            "fileName": "~/data/shapes/rocket/rocketexplosion.ogg",
+            "description": "AudioDefault3d",
+            "preload": 1.0
+        },
+        "RocketFireSound": {
+            "fileName": "~/data/sound/rocketlaunch.ogg",
+            "description": "AudioClose3d",
+            "preload": 1.0
+        },
+        "BombFireSound": {
+            "fileName": "~/data/sound/crossbow_firing.ogg",
+            "description": "AudioClose3d",
+            "preload": 1.0
+        }
+    },
+    "descriptions": {
+        "AudioGui": {
+            "volume": 1.0,
+            "isLooping": 0.0,
+            "is3D": 0.0,
+            "type": "$GuiAudioType"
+        },
+        "AudioTheme": {
+            "volume": 1.0,
+            "isLooping": 1.0,
+            "is3D": 0.0,
+            "type": "$GuiAudioType"
+        },
+        "AudioMessage": {
+            "volume": 1.0,
+            "isLooping": 0.0,
+            "is3D": 0.0,
+            "type": "$MessageAudioType"
+        },
+        "AudioChannel0": {
+            "volume": 1.0,
+            "isLooping": 0.0,
+            "is3D": 0.0,
+            "type": 0.0
+        },
+        "AudioChannel1": {
+            "volume": 1.0,
+            "isLooping": 0.0,
+            "is3D": 0.0,
+            "type": 1.0
+        },
+        "AudioChannel2": {
+            "volume": 1.0,
+            "isLooping": 0.0,
+            "is3D": 0.0,
+            "type": 2.0
+        },
+        "AudioChannel3": {
+            "volume": 1.0,
+            "isLooping": 0.0,
+            "is3D": 0.0,
+            "type": 3.0
+        },
+        "AudioChannel4": {
+            "volume": 1.0,
+            "isLooping": 0.0,
+            "is3D": 0.0,
+            "type": 4.0
+        },
+        "AudioChannel5": {
+            "volume": 1.0,
+            "isLooping": 0.0,
+            "is3D": 0.0,
+            "type": 5.0
+        },
+        "AudioChannel6": {
+            "volume": 1.0,
+            "isLooping": 0.0,
+            "is3D": 0.0,
+            "type": 6.0
+        },
+        "AudioChannel7": {
+            "volume": 1.0,
+            "isLooping": 0.0,
+            "is3D": 0.0,
+            "type": 7.0
+        },
+        "AudioChannel8": {
+            "volume": 1.0,
+            "isLooping": 0.0,
+            "is3D": 0.0,
+            "type": 8.0
+        },
+        "AudioDefault3d": {
+            "volume": 1.0,
+            "isLooping": 0.0,
+            "is3D": 1.0,
+            "referenceDistance": 20.0,
+            "maxDistance": 100.0,
+            "type": "$SimAudioType"
+        },
+        "AudioClose3d": {
+            "volume": 1.0,
+            "isLooping": 0.0,
+            "is3D": 1.0,
+            "referenceDistance": 10.0,
+            "maxDistance": 60.0,
+            "type": "$SimAudioType"
+        },
+        "AudioClosest3d": {
+            "volume": 1.0,
+            "isLooping": 0.0,
+            "is3D": 1.0,
+            "referenceDistance": 5.0,
+            "maxDistance": 30.0,
+            "type": "$SimAudioType"
+        },
+        "AudioDefaultLooping3d": {
+            "volume": 1.0,
+            "isLooping": 1.0,
+            "is3D": 1.0,
+            "referenceDistance": 20.0,
+            "maxDistance": 100.0,
+            "type": "$SimAudioType"
+        },
+        "AudioCloseLooping3d": {
+            "volume": 1.0,
+            "isLooping": 1.0,
+            "is3D": 1.0,
+            "referenceDistance": 10.0,
+            "maxDistance": 50.0,
+            "type": "$SimAudioType"
+        },
+        "AudioClosestLooping3d": {
+            "volume": 1.0,
+            "isLooping": 1.0,
+            "is3D": 1.0,
+            "referenceDistance": 5.0,
+            "maxDistance": 30.0,
+            "type": "$SimAudioType"
+        },
+        "Audio2D": {
+            "volume": 1.0,
+            "isLooping": 0.0,
+            "is3D": 0.0,
+            "type": "$SimAudioType"
+        },
+        "AudioLooping2D": {
+            "volume": 1.0,
+            "isLooping": 1.0,
+            "is3D": 0.0,
+            "type": "$SimAudioType"
+        }
+    }
+}
