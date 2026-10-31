@@ -60,3 +60,20 @@ export function controlBounds(rect: GuiRect, width: number, height: number) {
     const [y, h] = axis(rect.y, rect.h, DESIGN_HEIGHT, height, rect.vert);
     return { x, y, w, h };
 }
+
+/**
+ * Sizes and centers `stage` as the largest 4:3 box that fits in `width` x `height`, and returns its size.
+ * The menus are 800x600 pictures, so they keep their shape on wide screens instead of stretching.
+ */
+export function fitStage(stage: HTMLElement, width: number, height: number): { w: number; h: number } {
+    const w = Math.min(width, (height * DESIGN_WIDTH) / DESIGN_HEIGHT);
+    const h = (w * DESIGN_HEIGHT) / DESIGN_WIDTH;
+    Object.assign(stage.style, {
+        position: 'absolute',
+        left: `${(width - w) / 2}px`,
+        top: `${(height - h) / 2}px`,
+        width: `${w}px`,
+        height: `${h}px`,
+    });
+    return { w, h };
+}

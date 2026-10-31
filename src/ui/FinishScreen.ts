@@ -5,7 +5,7 @@ import type { Racer } from '../game/Race';
 import type { RaceSession } from '../game/RaceSession';
 import { TRACK_NAMES } from '../game/Tracks';
 import { bitmapButton, MEDIUM_TEXT, SAFARI_MEDIUM_TEXT } from './GuiControls';
-import { type GuiRect, placeControl } from './GuiLayout';
+import { fitStage, type GuiRect, placeControl } from './GuiLayout';
 import { formatRaceTime } from './Hud';
 
 const rel = (x: number, y: number, w: number, h: number): GuiRect => ({
@@ -40,6 +40,8 @@ export class FinishScreen {
     private readonly _scores: HTMLElement[] = [];
     private readonly _venue = document.createElement('div');
     private readonly _layout: { el: HTMLElement; rect: GuiRect }[] = [];
+    /** The 4:3 area holding the scoreboard; the dimmed race shows around it on wide screens. */
+    private readonly _stage = document.createElement('div');
     /** Track picked for the next race with the arrows. */
     private _track: number;
     /** Track of the race that just ended (index 0 to 7), which sets the prize. */
@@ -55,6 +57,7 @@ export class FinishScreen {
         this._track = trackNumber - 1;
         this._raceTrack = trackNumber - 1;
         const e = this.element;
+        e.append(this._stage);
         Object.assign(e.style, {
             position: 'absolute',
             inset: '0',
@@ -134,7 +137,8 @@ export class FinishScreen {
     }
 
     resize(width: number, height: number): void {
-        for (const { el, rect } of this._layout) placeControl(el, rect, width, height);
+        const { w, h } = fitStage(this._stage, width, height);
+        for (const { el, rect } of this._layout) placeControl(el, rect, w, h);
     }
 
     dispose(): void {
@@ -149,7 +153,7 @@ export class FinishScreen {
 
     private _add(el: HTMLElement, rect: GuiRect): void {
         this._layout.push({ el, rect });
-        this.element.append(el);
+        this._stage.append(el);
     }
 
     private _image(file: string): HTMLImageElement {

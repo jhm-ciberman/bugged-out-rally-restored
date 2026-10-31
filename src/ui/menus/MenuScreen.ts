@@ -1,6 +1,6 @@
 import { assetUrl } from '../../assets/AssetPaths';
 import { bitmapButton } from '../GuiControls';
-import { type GuiRect, placeControl } from '../GuiLayout';
+import { fitStage, type GuiRect, placeControl } from '../GuiLayout';
 
 /**
  * A rectangle that scales with the screen (`relative` sizing on both axes), in 800x600 design pixels.
@@ -23,9 +23,14 @@ export const rel640 = (x: number, y: number, w: number, h: number): GuiRect =>
 
 /**
  * A full-screen menu page: a background picture with controls placed in the 800x600 design space.
+ *
+ * The page is drawn in a centered 4:3 area; on wider screens the sides stay black (or show the race,
+ * for pages without a background).
  */
 export class MenuScreen {
     readonly element = document.createElement('div');
+    /** The 4:3 area that holds the background and the controls. */
+    private readonly _stage = document.createElement('div');
     private readonly _layout: { el: HTMLElement; rect: GuiRect }[] = [];
 
     constructor(background: string | null) {
@@ -33,12 +38,14 @@ export class MenuScreen {
             position: 'absolute',
             inset: '0',
             pointerEvents: 'auto',
-            background: background
-                ? `#000 url(${assetUrl(`client/ui/${background}`)}) center / 100% 100% no-repeat`
-                : 'transparent',
+            background: background ? '#000' : 'transparent',
             overflow: 'hidden',
             userSelect: 'none',
         });
+        if (background) {
+            this._stage.style.background = `url(${assetUrl(`client/ui/${background}`)}) center / 100% 100% no-repeat`;
+        }
+        this.element.append(this._stage);
         window.addEventListener('resize', this._onResize);
     }
 
@@ -63,7 +70,7 @@ export class MenuScreen {
      */
     add<T extends HTMLElement>(el: T, rect: GuiRect): T {
         this._layout.push({ el, rect });
-        this.element.append(el);
+        this._stage.append(el);
         return el;
     }
 
@@ -143,8 +150,11 @@ export class MenuScreen {
     }
 
     private readonly _onResize = (): void => {
-        const w = this.element.clientWidth || window.innerWidth;
-        const h = this.element.clientHeight || window.innerHeight;
+        const { w, h } = fitStage(
+            this._stage,
+            this.element.clientWidth || window.innerWidth,
+            this.element.clientHeight || window.innerHeight,
+        );
         for (const { el, rect } of this._layout) placeControl(el, rect, w, h);
     };
 }
