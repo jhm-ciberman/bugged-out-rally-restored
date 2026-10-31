@@ -21,6 +21,7 @@ export function bitmapButton(
 ): HTMLButtonElement {
     const button = document.createElement('button');
     const art = (state: string) => `url(${assetUrl(`client/ui/${bitmap}_${state}.png`)})`;
+    preloadButtonArt(bitmap);
     Object.assign(button.style, {
         background: `${art('n')} center / 100% 100% no-repeat`,
         border: 'none',
@@ -45,6 +46,25 @@ export function bitmapButton(
         if (!button.disabled) onClick();
     });
     return button;
+}
+
+/** Decoded button pictures, kept alive so the browser does not drop them. */
+const preloaded = new Map<string, HTMLImageElement>();
+
+/**
+ * Loads and decodes every state picture of a button up front, so the first hover or press
+ * swaps the art without a blank frame.
+ */
+function preloadButtonArt(bitmap: string): void {
+    for (const state of ['n', 'h', 'd', 'i']) {
+        const url = assetUrl(`client/ui/${bitmap}_${state}.png`);
+        if (preloaded.has(url)) continue;
+        const img = new Image();
+        img.src = url;
+        // Some buttons ship without every state; a missing picture is fine.
+        img.decode().catch(() => undefined);
+        preloaded.set(url, img);
+    }
 }
 
 /**
