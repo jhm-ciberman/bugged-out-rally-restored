@@ -2,8 +2,9 @@ import * as THREE from 'three';
 import { loadAssetManifest } from './assets/AssetPaths';
 import { ModelLibrary } from './assets/ModelLibrary';
 import { FlyCamera } from './camera/FlyCamera';
+import { PlayerCar } from './game/PlayerCar';
 import type { IUpdatable } from './IUpdatable';
-import { parseVector } from './torque/TorqueMath';
+import { parseRotation, parseVector } from './torque/TorqueMath';
 import { Track } from './world/Track';
 
 // Torque blended colors without gamma correction. Keep every color in that same space.
@@ -22,9 +23,10 @@ export class Game {
     private readonly _entities: IUpdatable[] = [];
     private readonly _models = new ModelLibrary();
     private _track: Track | null = null;
+    private _player: PlayerCar | null = null;
 
     constructor(private readonly _container: HTMLElement) {
-        this._camera = new THREE.PerspectiveCamera(70, this._aspect, 0.1, 2000);
+        this._camera = new THREE.PerspectiveCamera(verticalFov(this._aspect), this._aspect, 0.1, 2000);
         this._camera.up.set(0, 0, 1);
 
         this._renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -34,6 +36,11 @@ export class Game {
         this._container.appendChild(this._renderer.domElement);
 
         window.addEventListener('resize', this._onResize);
+    }
+
+    /** The car the player drives, or `null` in fly mode or while loading. */
+    get player(): PlayerCar | null {
+        return this._player;
     }
 
     /** The loaded track, or `null` while loading. */
@@ -53,19 +60,34 @@ export class Game {
         this._camera.far = track.visibleDistance + 50;
         this._camera.updateProjectionMatrix();
 
-        const fly = new FlyCamera(this._camera, this._renderer.domElement);
-        const spawn = track.objects.find((o) => o.className === 'SpawnSphere');
-        const start = parseVector(spawn?.fields.get('position'));
-        // Debug views: ?cam=x,y,z&look=x,y,z in Torque coordinates.
         const params = new URLSearchParams(window.location.search);
+        const drop = track.objects.find((o) => o.className === 'SpawnSphere');
+        const start = parseVector(drop?.fields.get('position'));
         const camParam = params.get('cam');
         const lookParam = params.get('look');
-        if (camParam && lookParam) {
-            fly.lookFrom(parseVector(camParam.replace(/,/g, ' ')), parseVector(lookParam.replace(/,/g, ' ')));
+        if (params.has('fly') || (camParam && lookParam)) {
+            // Debug views: ?fly, or ?cam=x,y,z&look=x,y,z in Torque coordinates.
+            const fly = new FlyCamera(this._camera, this._renderer.domElement);
+            if (camParam && lookParam) {
+                fly.lookFrom(parseVector(camParam.replace(/,/g, ' ')), parseVector(lookParam.replace(/,/g, ' ')));
+            } else {
+                fly.lookFrom(start.clone().add(new THREE.Vector3(30, 30, 25)), start);
+            }
+            this._entities.push(fly);
         } else {
-            fly.lookFrom(start.clone().add(new THREE.Vector3(30, 30, 25)), start);
+            const car = await PlayerCar.create(
+                params.get('car') ?? 'Cockroach',
+                track,
+                this._models,
+                this._camera,
+                this._renderer.domElement,
+                start,
+                parseRotation(drop?.fields.get('rotation')),
+            );
+            this._scene.add(car.view.object);
+            this._entities.push(car);
+            this._player = car;
         }
-        this._entities.push(fly);
 
         this._renderer.setAnimationLoop(this._tick);
     }
@@ -95,7 +117,16 @@ export class Game {
 
     private readonly _onResize = (): void => {
         this._camera.aspect = this._aspect;
+        this._camera.fov = verticalFov(this._aspect);
         this._camera.updateProjectionMatrix();
         this._renderer.setSize(window.innerWidth, window.innerHeight);
     };
+}
+
+/** Torque's default field of view, measured horizontally (`$pref::Player::defaultFov`). */
+const HORIZONTAL_FOV = 90;
+
+function verticalFov(aspect: number): number {
+    const h = THREE.MathUtils.degToRad(HORIZONTAL_FOV);
+    return THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(h / 2) / aspect));
 }
