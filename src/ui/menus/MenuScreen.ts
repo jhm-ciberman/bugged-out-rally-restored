@@ -109,6 +109,33 @@ export class MenuScreen {
     }
 
     /**
+     * Adds text laid out between margins given in percent of the control's own width, like the
+     * `<lmargin%:5><rmargin%:105>` markup of the original GUIs. Returns the element holding the text.
+     */
+    marginText(
+        text: string,
+        profile: { font: string; color: string },
+        rect: GuiRect,
+        leftPercent = 5,
+        rightPercent = 105,
+    ): HTMLDivElement {
+        const box = this.add(document.createElement('div'), rect);
+        const inner = document.createElement('div');
+        inner.textContent = text;
+        Object.assign(inner.style, {
+            ...profile,
+            position: 'absolute',
+            top: '0',
+            left: `${leftPercent}%`,
+            width: `${rightPercent - leftPercent}%`,
+            whiteSpace: 'pre-wrap',
+            lineHeight: '1.15',
+        });
+        box.append(inner);
+        return inner;
+    }
+
+    /**
      * Re-lays out all controls for the current window size.
      */
     layout(): void {

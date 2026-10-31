@@ -101,17 +101,15 @@ export class PlayerSelection extends MenuScreen {
         this.button('buttons/enter', rel640(196, 220, 80, 24), () => this._finishAdd());
         this.image('noteblock.png', rel640(36, 249, 248, 125));
         this.image('noteblock.png', rel640(350, 249, 247, 125));
-        this.text(
+        this.marginText(
             'Click on the slot to select the player name.\nPress Add to create a new user and click Enter to finish editing.\nTo delete a slot, select the slot and press Del.',
             ABOUT_TEXT,
             rel640(49, 263, 214, 96),
-            { padding: '0 5%' },
         );
-        this.text(
+        this.marginText(
             'Select different bugs by pressing the left or right arrows.\nEarn money to unlock the bugs.',
             ABOUT_TEXT,
             rel640(362, 281, 214, 48),
-            { padding: '0 5%' },
         );
 
         // Every visit starts on the first slot and the first bug.

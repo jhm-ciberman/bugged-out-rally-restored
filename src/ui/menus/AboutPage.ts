@@ -10,15 +10,9 @@ export class AboutPage extends MenuScreen {
     constructor(onBack: () => void) {
         super('aboutpage.jpg');
         const html = (rect: ReturnType<typeof rel640>, content: string) => {
-            const el = this.add(document.createElement('div'), rect);
+            // `<lmargin%:5><rmargin%:95>`: the text runs from 5% to 95% of the control's width.
+            const el = this.marginText('', { font: '16px Arial, sans-serif', color: ORANGE }, rect, 5, 95);
             el.innerHTML = content;
-            Object.assign(el.style, {
-                color: ORANGE,
-                font: '16px Arial, sans-serif',
-                padding: '0 5%',
-                boxSizing: 'border-box',
-                lineHeight: '1.2',
-            });
         };
         const b = (text: string, size = 16) => `<b style="font-size:${size}px">${text}</b>`;
         const link = (url: string, text: string) =>

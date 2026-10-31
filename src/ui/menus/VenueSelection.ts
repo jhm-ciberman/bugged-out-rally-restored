@@ -75,12 +75,11 @@ export class VenueSelection extends MenuScreen {
         for (const e of EVENTS) this._eventPictures.push(this.image(e.picture, rel640(74, 64, 160, 160)));
         this.image('noteblock.png', rel640(36, 265, 248, 104));
         this.image('noteblock.png', rel640(350, 265, 247, 104));
-        this._eventHint = this.text('', ABOUT_TEXT, rel640(47, 275, 214, 48), { padding: '0 5%' });
-        this.text(
+        this._eventHint = this.marginText('', ABOUT_TEXT, rel640(47, 275, 214, 48));
+        this.marginText(
             'Select different tracks by pressing the left or right arrows.\nTracks will be locked until you win the previous track and event.',
             ABOUT_TEXT,
             rel640(362, 277, 214, 80),
-            { padding: '0 5%' },
         );
         this._setTrack(0);
         this._setEvent(0);
