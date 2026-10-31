@@ -70,7 +70,7 @@ export class RaceSession implements IUpdatable {
         this.pickups = new Pickups(track.items);
         this.zones = new Zones(track);
         this.combat = combat;
-        combat.onDamage = ({ target, amount }) => target.applyDamage(amount);
+        combat.onDamage = ({ target, source, amount }) => target.applyDamage(amount, { kind: 'projectile', source });
         this.player = player;
         this.cars.push(player);
         this.playerRacer = this.race.addRacer('Player', player.vehicle);
@@ -140,6 +140,14 @@ export class RaceSession implements IUpdatable {
     wreck(car: Car): void {
         if (car.respawnTimer > 0) return;
         car.respawnTimer = RESPAWN_SECONDS;
+        // Scoring (`GameConnection::onDeath`): a crash costs a point; a kill also gives the shooter one.
+        // Zone damage goes around onDeath, so it does not score.
+        const cause = car.wreckCause;
+        if (cause && cause.kind !== 'zone') {
+            car.score--;
+            if (cause.source && cause.source !== car) cause.source.score++;
+        }
+        car.wreckCause = null;
         car.rockets = 0;
         car.bombs = 0;
         car.boosting = false;

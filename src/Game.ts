@@ -80,13 +80,18 @@ export class Game {
             }
             this._entities.push(fly);
         } else {
-            const hud = new RaceHud(this._container, this._audio);
-            const event = params.get('event');
+            const eventParam = params.get('event');
+            const event = eventParam === 'explore' || eventParam === 'circuit' ? eventParam : 'single';
+            const hud = new RaceHud(this._container, this._audio, event, number, (choice) => {
+                const next = new URLSearchParams(window.location.search);
+                if (choice.action === 'replay') next.set('track', String(choice.track));
+                window.location.search = next.toString();
+            });
             const session = await RaceSession.create({
                 track,
                 models: this._models,
                 carName: params.get('car') ?? 'Cockroach',
-                event: event === 'explore' || event === 'circuit' ? event : 'single',
+                event,
                 winnings: Number(params.get('winnings') ?? 0),
                 camera: this._camera,
                 element: this._renderer.domElement,

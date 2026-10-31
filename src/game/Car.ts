@@ -7,6 +7,15 @@ import { VehicleView } from '../vehicle/VehicleView';
 import { type VehicleMove, WheeledVehicle } from '../vehicle/WheeledVehicle';
 import type { Track } from '../world/Track';
 
+/**
+ * Why a car took damage. Zone damage (death zones, cacti) bypasses scoring in the original.
+ */
+export interface DamageCause {
+    readonly kind: 'impact' | 'projectile' | 'zone';
+    /** The car that fired, for projectile damage. */
+    readonly source: Car | null;
+}
+
 /** Smallest crash damage that counts (`WheeledVehicleData::onImpact`). */
 const IMPACT_DAMAGE_THRESHOLD = 4.5;
 
@@ -27,6 +36,10 @@ export class Car {
     bombs = 0;
     /** Damage taken; the car is wrecked at `vehicle.data.maxDamage`. */
     damage = 0;
+    /** What wrecked the car last, for scoring. */
+    wreckCause: DamageCause | null = null;
+    /** Kill score: +1 per car wrecked, -1 per own wreck (`GameConnection::onDeath`). */
+    score = 0;
 
     private _sounds: VehicleSounds | null = null;
 
@@ -121,9 +134,10 @@ export class Car {
     /**
      * Adds damage, up to the wreck level.
      */
-    applyDamage(amount: number): void {
+    applyDamage(amount: number, cause: DamageCause = { kind: 'zone', source: null }): void {
         if (this.isWrecked) return;
         this.damage = Math.min(this.vehicle.data.maxDamage, this.damage + Math.abs(amount));
+        if (this.isWrecked) this.wreckCause = cause;
     }
 
     /**
@@ -137,6 +151,6 @@ export class Car {
         this._sounds?.impact(speed);
         // WheeledVehicleData::onImpact: damage only for hits above 4.5.
         const damage = speed * this.vehicle.data.speedDamageScale;
-        if (damage > IMPACT_DAMAGE_THRESHOLD) this.applyDamage(damage);
+        if (damage > IMPACT_DAMAGE_THRESHOLD) this.applyDamage(damage, { kind: 'impact', source: null });
     }
 }

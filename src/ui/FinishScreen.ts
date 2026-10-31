@@ -1,0 +1,214 @@
+import type { RaceEvent } from '../ai/BotRoster';
+import { assetUrl } from '../assets/AssetPaths';
+import { firstPrize, KILL_VALUE, placePrize } from '../game/Prizes';
+import type { Racer } from '../game/Race';
+import type { RaceSession } from '../game/RaceSession';
+import { bitmapButton, MEDIUM_TEXT, SAFARI_MEDIUM_TEXT } from './GuiControls';
+import { type GuiRect, placeControl } from './GuiLayout';
+import { formatRaceTime } from './Hud';
+
+/** Track names, from each mission's `MissionInfo`. */
+export const TRACK_NAMES = [
+    'Croaky Pond',
+    'Turtle Creek',
+    'Twin Peaks',
+    'Boomerang II',
+    'Snowbound',
+    'Ocean Side',
+    'Dunes II',
+    'Lunar',
+];
+
+const rel = (x: number, y: number, w: number, h: number): GuiRect => ({
+    x,
+    y,
+    w,
+    h,
+    horiz: 'relative',
+    vert: 'relative',
+});
+
+/** Row positions of the scoreboard (`finishGameGui.gui`; the uneven spacing is in the original). */
+const NAME_ROWS = [82, 112, 142, 175, 202, 232, 262, 292];
+const SCORE_ROWS = [82, 112, 142, 175, 202, 232, 275, 302];
+/** The scoreboard panel's corner; the rows are placed inside it. */
+const PANEL = { x: 38, y: 1 };
+/** The button bar's corner. */
+const BAR = { x: 0, y: 475 };
+
+/**
+ * What the player picked on the finish screen.
+ */
+export type FinishChoice = { action: 'replay'; track: number } | { action: 'quit' };
+
+/**
+ * The end-of-race scoreboard with its button bar (`finishGameGui.gui`): lap times, prize and kills per racer,
+ * a track picker, Replay and Quit.
+ */
+export class FinishScreen {
+    readonly element = document.createElement('div');
+    private readonly _names: HTMLElement[] = [];
+    private readonly _scores: HTMLElement[] = [];
+    private readonly _venue = document.createElement('div');
+    private readonly _layout: { el: HTMLElement; rect: GuiRect }[] = [];
+    /** Track picked for the next race with the arrows. */
+    private _track: number;
+    /** Track of the race that just ended (index 0 to 7), which sets the prize. */
+    private readonly _raceTrack: number;
+
+    constructor(
+        parent: HTMLElement,
+        private readonly _session: RaceSession,
+        private readonly _event: RaceEvent,
+        trackNumber: number,
+        private readonly _onChoice: (choice: FinishChoice) => void,
+    ) {
+        this._track = trackNumber - 1;
+        this._raceTrack = trackNumber - 1;
+        const e = this.element;
+        Object.assign(e.style, {
+            position: 'absolute',
+            inset: '0',
+            background: `url(${assetUrl('client/ui/hudfill.png')}) center / 100% 100%`,
+            pointerEvents: 'auto',
+        });
+
+        this._add(this._image('scoreboard_n.png'), rel(PANEL.x, PANEL.y, 725, 425));
+        this._add(this._text('Game Over - Final Scores:', MEDIUM_TEXT), rel(PANEL.x + 237, PANEL.y + 12, 250, 30));
+        this._add(
+            this._text('Lap1   \tLap2    \tLap3    \tFinal   \tPrize   \tKills', SAFARI_MEDIUM_TEXT),
+            rel(PANEL.x + 242, PANEL.y + 50, 344, 22),
+        );
+        for (let i = 0; i < 8; i++) {
+            const name = this._text('', SAFARI_MEDIUM_TEXT);
+            const score = this._text('', SAFARI_MEDIUM_TEXT);
+            this._names.push(name);
+            this._scores.push(score);
+            this._add(name, rel(PANEL.x + 45, PANEL.y + NAME_ROWS[i], 180, 22));
+            this._add(score, rel(PANEL.x + 242, PANEL.y + SCORE_ROWS[i], 340, 22));
+        }
+
+        this._add(this._image('ingamegui_n.png'), rel(BAR.x, BAR.y, 800, 125));
+        this._add(
+            bitmapButton('quit', () => this._onChoice({ action: 'quit' })),
+            rel(BAR.x + 650, BAR.y + 50, 95, 31),
+        );
+        this._add(
+            bitmapButton('launch', () => this._onChoice({ action: 'replay', track: this._track + 1 })),
+            rel(BAR.x + 114, BAR.y + 29, 95, 33),
+        );
+        this._add(
+            bitmapButton('buttons/left', () => this._cycle(-1)),
+            rel(BAR.x + 37, BAR.y + 71, 25, 27),
+        );
+        this._add(
+            bitmapButton('buttons/right', () => this._cycle(1)),
+            rel(BAR.x + 262, BAR.y + 71, 25, 27),
+        );
+        Object.assign(this._venue.style, { ...MEDIUM_TEXT, textAlign: 'center', whiteSpace: 'nowrap' });
+        this._add(this._venue, rel(BAR.x + 62, BAR.y + 71, 202, 24));
+        this._cycle(0);
+
+        parent.append(e);
+        this.resize(window.innerWidth, window.innerHeight);
+        this.refresh();
+        window.addEventListener('keydown', this._onKey);
+    }
+
+    /**
+     * Rewrites the rows from the current standings. Bots that are still racing show their times as they finish.
+     */
+    refresh(): void {
+        const race = this._session.race;
+        const standings = race.standings();
+        const first = firstPrize(this._event, this._raceTrack, race.racers.length);
+        standings.forEach((racer, i) => {
+            if (i >= 8) return;
+            const car = this._session.cars.find((c) => c.vehicle === racer.vehicle);
+            const kills = car?.score ?? 0;
+            const prize = racer.finishTime !== null ? placePrize(first, i + 1) : 0;
+            setColumns(this._names[i], `${i + 1}. ${racer.name}`);
+            setColumns(
+                this._scores[i],
+                [
+                    ...lapSplits(racer),
+                    racer.finishTime !== null ? formatRaceTime(racer.finishTime) : '--',
+                    `$${prize}`,
+                    kills < 0 ? `-$${-kills * KILL_VALUE}` : `$${kills * KILL_VALUE}`,
+                ].join('\t'),
+            );
+        });
+        for (let i = standings.length; i < 8; i++) {
+            setColumns(this._names[i], '');
+            setColumns(this._scores[i], '');
+        }
+    }
+
+    resize(width: number, height: number): void {
+        for (const { el, rect } of this._layout) placeControl(el, rect, width, height);
+    }
+
+    dispose(): void {
+        window.removeEventListener('keydown', this._onKey);
+        this.element.remove();
+    }
+
+    private _cycle(step: number): void {
+        this._track = (this._track + step + TRACK_NAMES.length) % TRACK_NAMES.length;
+        this._venue.textContent = TRACK_NAMES[this._track];
+    }
+
+    private _add(el: HTMLElement, rect: GuiRect): void {
+        this._layout.push({ el, rect });
+        this.element.append(el);
+    }
+
+    private _image(file: string): HTMLImageElement {
+        const img = document.createElement('img');
+        img.src = assetUrl(`client/ui/${file}`);
+        return img;
+    }
+
+    private _text(text: string, profile: { font: string; color: string }): HTMLElement {
+        const t = document.createElement('div');
+        Object.assign(t.style, { ...profile, whiteSpace: 'pre', lineHeight: '22px', display: 'flex' });
+        setColumns(t, text);
+        return t;
+    }
+
+    // Escape is the Quit button's accelerator.
+    private readonly _onKey = (e: KeyboardEvent): void => {
+        if (e.code === 'Escape') this._onChoice({ action: 'quit' });
+    };
+}
+
+/**
+ * Returns each lap's own time, `--` for laps not driven yet.
+ */
+function lapSplits(racer: Racer): string[] {
+    const out: string[] = [];
+    let previous = 0;
+    for (let i = 0; i < 3; i++) {
+        const end = racer.lapTimes[i];
+        out.push(end === undefined ? '--' : formatRaceTime(end - previous));
+        if (end !== undefined) previous = end;
+    }
+    return out;
+}
+
+/** Width of one scoreboard column, in pixels: wide enough for a race time, and six fit inside the panel. */
+const COLUMN_WIDTH = 80;
+
+/**
+ * Shows tab-separated `text` as fixed-width columns, so the rows line up under the header.
+ */
+function setColumns(row: HTMLElement, text: string): void {
+    row.replaceChildren(
+        ...text.split('	').map((cell) => {
+            const span = document.createElement('span');
+            span.textContent = cell.trim();
+            span.style.flex = `0 0 ${COLUMN_WIDTH}px`;
+            return span;
+        }),
+    );
+}

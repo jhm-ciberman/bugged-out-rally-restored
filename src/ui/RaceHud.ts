@@ -1,9 +1,11 @@
 import type * as THREE from 'three';
+import type { RaceEvent } from '../ai/BotRoster';
 import type { ModelLibrary } from '../assets/ModelLibrary';
 import type { AudioSystem } from '../audio/AudioSystem';
 import { RACE_LAPS, type RaceEvents } from '../game/Race';
 import type { RaceSession } from '../game/RaceSession';
 import { DirectionArrow } from './DirectionArrow';
+import { type FinishChoice, FinishScreen } from './FinishScreen';
 import { Hud } from './Hud';
 
 /**
@@ -14,11 +16,17 @@ export class RaceHud {
     private readonly _arrow = new DirectionArrow();
     private _session: RaceSession | null = null;
 
+    private _finish: FinishScreen | null = null;
+    private _refreshTimer = 0;
+
     constructor(
-        parent: HTMLElement,
+        private readonly _parent: HTMLElement,
         private readonly _audio: AudioSystem,
+        private readonly _event: RaceEvent,
+        private readonly _trackNumber: number,
+        private readonly _onChoice: (choice: FinishChoice) => void,
     ) {
-        this.hud = new Hud(parent);
+        this.hud = new Hud(_parent);
         for (const p of ['AudioCountBeep', 'AudioGoBeep']) _audio.preload(p);
     }
 
@@ -30,6 +38,10 @@ export class RaceHud {
             onCountdown: (value) => {
                 this.hud.showCountdown(value);
                 void this._audio.play2d(value > 0 ? 'AudioCountBeep' : 'AudioGoBeep');
+            },
+            onFinish: (racer) => {
+                // The scoreboard comes up 200 ms after the player's last lap (`onCycleExec`).
+                if (racer === this._session?.playerRacer) setTimeout(() => this._showFinish(), 200);
             },
             onCenterPrint: (racer, text) => {
                 if (racer === this._session?.playerRacer) this.hud.centerPrint(text);
@@ -51,6 +63,13 @@ export class RaceHud {
     update(deltaSeconds: number): void {
         const s = this._session;
         if (!s) return;
+        if (this._finish) {
+            this._refreshTimer -= deltaSeconds;
+            if (this._refreshTimer <= 0) {
+                this._refreshTimer = 0.5;
+                this._finish.refresh();
+            }
+        }
         const v = s.player.vehicle;
         const racer = s.playerRacer;
         this.hud.update(
@@ -73,11 +92,18 @@ export class RaceHud {
      */
     render(renderer: THREE.WebGLRenderer, camera: THREE.Camera): void {
         const s = this._session;
-        if (!s) return;
+        if (!s || this._finish) return;
         this._arrow.render(renderer, camera, s.player.renderPosition, s.race.nextCheckpointPosition(s.playerRacer));
     }
 
     resize(width: number, height: number): void {
         this.hud.resize(width, height);
+        this._finish?.resize(width, height);
+    }
+
+    private _showFinish(): void {
+        if (this._finish || !this._session) return;
+        document.exitPointerLock();
+        this._finish = new FinishScreen(this._parent, this._session, this._event, this._trackNumber, this._onChoice);
     }
 }
