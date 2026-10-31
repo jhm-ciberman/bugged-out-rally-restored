@@ -15,6 +15,9 @@ interface DescriptionJson {
     maxDistance?: number;
 }
 
+/** Default volume of every audio channel (`$pref::Audio::channelVolumeN`). */
+const CHANNEL_VOLUME = 0.8;
+
 const profiles = audio.profiles as Record<string, ProfileJson>;
 const descriptions = audio.descriptions as Record<string, DescriptionJson>;
 
@@ -28,6 +31,7 @@ export class AudioSystem {
     readonly listener = new THREE.AudioListener();
     private readonly _loader = new THREE.AudioLoader();
     private readonly _buffers = new Map<string, Promise<AudioBuffer | null>>();
+    private _music: THREE.Audio | null = null;
 
     constructor(camera: THREE.Camera) {
         camera.add(this.listener);
@@ -43,6 +47,31 @@ export class AudioSystem {
      */
     preload(profile: string): void {
         void this._buffer(profile);
+    }
+
+    /**
+     * Starts looping `profile` as the background music, replacing the current one.
+     */
+    async playMusic(profile: string): Promise<void> {
+        this.stopMusic();
+        const buffer = await this._buffer(profile);
+        if (!buffer) return;
+        const music = new THREE.Audio(this.listener);
+        music.setBuffer(buffer);
+        music.setLoop(true);
+        music.setVolume(this._description(profile).volume);
+        this._music = music;
+        const start = () => {
+            if (this._music === music && !music.isPlaying) music.play();
+        };
+        if (this.listener.context.state === 'running') start();
+        else void this.listener.context.resume().then(start);
+        this.listener.context.addEventListener('statechange', start, { once: true });
+    }
+
+    stopMusic(): void {
+        if (this._music?.isPlaying) this._music.stop();
+        this._music = null;
     }
 
     /**
@@ -102,7 +131,7 @@ export class AudioSystem {
     private _description(profile: string) {
         const d = descriptions[profiles[profile]?.description ?? ''] ?? {};
         return {
-            volume: d.volume ?? 1,
+            volume: (d.volume ?? 1) * CHANNEL_VOLUME,
             referenceDistance: d.referenceDistance ?? 1,
             maxDistance: d.maxDistance ?? 100,
         };

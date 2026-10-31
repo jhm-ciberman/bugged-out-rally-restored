@@ -1,4 +1,5 @@
 import type * as THREE from 'three';
+import { parseVector } from '../torque/TorqueMath';
 import type { WheeledVehicle } from '../vehicle/WheeledVehicle';
 import type { Track } from '../world/Track';
 import { TriggerVolume } from '../world/TriggerVolume';
@@ -56,6 +57,8 @@ export class Race {
     time = 0;
     readonly racers: Racer[] = [];
     readonly checkpoints: TriggerVolume[];
+    /** Where the marker of each checkpoint floats, by checkpoint number (`checkpointmarkerN`). */
+    readonly markers = new Map<number, THREE.Vector3>();
     private _phaseTime = 0;
     private _count = 3;
 
@@ -70,6 +73,46 @@ export class Race {
                     (o.fields.get('datablock') ?? '').toLowerCase() === 'checkpointtrigger',
             )
             .map((o) => new TriggerVolume(o));
+        for (const o of track.objects) {
+            const m = /^checkpointmarker(\d+)$/i.exec(o.name);
+            if (m) this.markers.set(Number(m[1]), parseVector(o.fields.get('position')));
+        }
+    }
+
+    /**
+     * Returns where the racer must go next: the marker of its next checkpoint.
+     */
+    nextCheckpointPosition(racer: Racer): THREE.Vector3 | undefined {
+        return this.markers.get(racer.nextCheck);
+    }
+
+    /**
+     * Returns the racer's place, starting at 1.
+     *
+     * The original ranking lives in native code (`GuiRaceTextListCtrl`). This orders by finish time,
+     * then laps, then checkpoints passed, then distance to the next checkpoint.
+     */
+    positionOf(racer: Racer): number {
+        return this.standings().indexOf(racer) + 1;
+    }
+
+    /**
+     * Returns the racers from first to last place.
+     */
+    standings(): Racer[] {
+        const progress = (r: Racer) => r.lap * 100 + (r.nextCheck - 1);
+        const distance = (r: Racer) => {
+            const target = this.nextCheckpointPosition(r);
+            return target ? target.distanceTo(r.vehicle.rigid.linPosition) : 0;
+        };
+        return [...this.racers].sort((a, b) => {
+            if (a.finishTime !== null || b.finishTime !== null) {
+                if (a.finishTime === null) return 1;
+                if (b.finishTime === null) return -1;
+                return a.finishTime - b.finishTime;
+            }
+            return progress(b) - progress(a) || distance(a) - distance(b);
+        });
     }
 
     /**

@@ -6,6 +6,7 @@ import { FlyCamera } from './camera/FlyCamera';
 import { RaceSession } from './game/RaceSession';
 import type { IUpdatable } from './IUpdatable';
 import { parseVector } from './torque/TorqueMath';
+import { RaceHud } from './ui/RaceHud';
 import { Track } from './world/Track';
 
 // Torque blended colors without gamma correction. Keep every color in that same space.
@@ -26,6 +27,7 @@ export class Game {
     private readonly _audio: AudioSystem;
     private _track: Track | null = null;
     private _session: RaceSession | null = null;
+    private _hud: RaceHud | null = null;
 
     constructor(private readonly _container: HTMLElement) {
         this._camera = new THREE.PerspectiveCamera(verticalFov(this._aspect), this._aspect, 0.1, 2000);
@@ -78,6 +80,7 @@ export class Game {
             }
             this._entities.push(fly);
         } else {
+            const hud = new RaceHud(this._container, this._audio);
             const session = await RaceSession.create(
                 track,
                 this._models,
@@ -85,10 +88,15 @@ export class Game {
                 this._camera,
                 this._renderer.domElement,
                 this._audio,
+                hud.events,
             );
+            await hud.attach(session, this._models);
+            this._hud = hud;
             for (const car of session.cars) this._scene.add(car.view.object);
-            this._entities.push(session);
+            this._entities.push(session, hud);
             this._session = session;
+            const music = track.find('MissionGroup')?.fields.get('musictrack');
+            if (music) void this._audio.playMusic(music);
         }
 
         this._renderer.setAnimationLoop(this._tick);
@@ -115,6 +123,7 @@ export class Game {
             entity.update(dt);
         }
         this._renderer.render(this._scene, this._camera);
+        this._hud?.render(this._renderer, this._camera);
     };
 
     private readonly _onResize = (): void => {
@@ -122,6 +131,7 @@ export class Game {
         this._camera.fov = verticalFov(this._aspect);
         this._camera.updateProjectionMatrix();
         this._renderer.setSize(window.innerWidth, window.innerHeight);
+        this._hud?.resize(window.innerWidth, window.innerHeight);
     };
 }
 
