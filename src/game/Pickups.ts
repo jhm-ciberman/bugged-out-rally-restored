@@ -65,7 +65,7 @@ export class Pickups {
                 continue;
             }
             for (const car of cars) {
-                if (car.isWrecked || !touches(car, item.position)) continue;
+                if (car.isWrecked || car.respawnTimer > 0 || !touches(car, item.position)) continue;
                 if (this._take(car, item.kind)) {
                     item.hiddenFor = RESPAWN_SECONDS;
                     item.model.visible = false;

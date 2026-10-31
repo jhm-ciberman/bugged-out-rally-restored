@@ -1,0 +1,13 @@
+{
+    "permissions": {
+        "allow": [
+            "Bash(npx tsc --noEmit -p .)",
+            "Bash(npx biome check .)",
+            "Bash(npx vitest run)",
+            "mcp__context7__query-docs",
+            "mcp__context7__resolve-library-id",
+            "mcp__claude-in-chrome__tabs_context_mcp",
+            "mcp__claude-in-chrome__read_console_messages"
+        ]
+    }
+}

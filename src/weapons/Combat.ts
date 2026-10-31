@@ -114,6 +114,14 @@ export class Combat {
         this.particles.update(dt);
     }
 
+    /**
+     * Removes every projectile and particle.
+     */
+    dispose(): void {
+        for (let i = this._flying.length - 1; i >= 0; i--) this._remove(i);
+        this.object.removeFromParent();
+    }
+
     private _fire(car: Car, data: ProjectileData, mount: 0 | 1): void {
         const rigid = car.vehicle.rigid;
         const muzzle = car.vehicle.data.mounts[mount].clone().applyQuaternion(rigid.angPosition).add(rigid.linPosition);

@@ -21,7 +21,8 @@ const MAX_TICKS_PER_FRAME = 8;
 /** Seconds a wrecked car stays gone before it reappears at its last checkpoint (native `onDestroy`). */
 const RESPAWN_SECONDS = 4;
 
-const IDLE_MOVE: VehicleMove = { throttle: 0, yaw: 0, brake: false, jet: false };
+/** A move with no input. A new object each time, because cars change the move they are given. */
+const idleMove = (brake = false): VehicleMove => ({ throttle: 0, yaw: 0, brake, jet: false });
 
 /**
  * How to set up a race.
@@ -102,7 +103,7 @@ export class RaceSession implements IUpdatable {
             const car = cars[i];
             const racer = session.race.addRacer(entry.name, car.vehicle);
             const bot = new Bot(car, racer, track, i);
-            bot.autopilot.onGiveUp = () => session.wreck(car);
+            bot.autopilot.onGiveUp = () => session.respawnLater(car);
             racer.onCheckpoint = () => bot.markCheckpoint();
             session.cars.push(car);
             session.bots.push(bot);
@@ -157,8 +158,18 @@ export class RaceSession implements IUpdatable {
     /**
      * Removes the input listeners and stops the sounds.
      */
+    /**
+     * Puts a hopelessly stuck car back at its last checkpoint after a few seconds. Unlike a wreck,
+     * it stays visible and keeps its ammo (native `onDestroy` for AI only arms a timer).
+     */
+    respawnLater(car: Car): void {
+        if (car.respawnTimer > 0) return;
+        car.respawnTimer = RESPAWN_SECONDS;
+    }
+
     dispose(): void {
         this._input.dispose();
+        this.combat.dispose();
         for (const car of this.cars) car.dispose();
     }
 
@@ -199,11 +210,11 @@ export class RaceSession implements IUpdatable {
             if (car.respawnTimer > 0) this._updateRespawn(car);
         }
 
-        this.player.tick(this.player.respawnTimer > 0 ? { ...IDLE_MOVE, brake: true } : move);
+        this.player.tick(this.player.respawnTimer > 0 ? idleMove(true) : move);
         for (const bot of this.bots) {
             bot.autopilot.slow = this.zones.inSlowZone(bot.car.vehicle.rigid.worldCenterOfMass);
             const driving = racing && bot.car.respawnTimer <= 0;
-            bot.car.tick(driving ? bot.nextMove() : IDLE_MOVE);
+            bot.car.tick(driving ? bot.nextMove() : idleMove());
         }
         this.zones.tick(this.cars);
 

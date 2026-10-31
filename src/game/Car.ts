@@ -16,6 +16,9 @@ export interface DamageCause {
     readonly source: Car | null;
 }
 
+/** Energy a boost pad gives (`setBoostLevel(100)` in boostpad.cs). */
+const BOOST_LEVEL = 100;
+
 /** Smallest crash damage that counts (`WheeledVehicleData::onImpact`). */
 const IMPACT_DAMAGE_THRESHOLD = 4.5;
 
@@ -127,7 +130,8 @@ export class Car {
      * What the native flag does is not known; jetting until the energy is gone is the closest stock behavior.
      */
     startBoost(): void {
-        this.vehicle.energy = this.vehicle.data.maxEnergy;
+        // setBoostLevel(100) goes through setEnergyLevel, which caps at the car's maximum.
+        this.vehicle.energy = Math.min(BOOST_LEVEL, this.vehicle.data.maxEnergy);
         this.boosting = true;
     }
 

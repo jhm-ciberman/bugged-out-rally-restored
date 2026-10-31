@@ -35,7 +35,7 @@ export class Zones {
      */
     tick(cars: readonly Car[]): void {
         for (const car of cars) {
-            if (car.isWrecked) continue;
+            if (car.isWrecked || car.respawnTimer > 0) continue;
             const p = car.vehicle.rigid.worldCenterOfMass;
             let inside = this._inside.get(car);
             if (!inside) {
