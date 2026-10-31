@@ -87,6 +87,7 @@ export class RaceHud {
                 time: racer.finishTime ?? s.race.time,
                 rockets: s.player.rockets,
                 bombs: s.player.bombs,
+                damageFlash: s.player.damageFlash,
             },
             deltaSeconds,
         );

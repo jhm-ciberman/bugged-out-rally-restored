@@ -28,6 +28,8 @@ const SPEEDO = { maxSpeed: 100, minAngle: 215, maxAngle: -70, centerX: 60, cente
 /** Health bar pulse: period in ms and the level below which it pulses. */
 const PULSE_MS = 1000;
 const PULSE_THRESHOLD = 0.5;
+/** The renderer never draws the damage flash stronger than this (`renderWorld`). */
+const MAX_FLASH_OPACITY = 0.76;
 
 /**
  * Values shown on the HUD, refreshed every frame.
@@ -46,6 +48,8 @@ export interface HudState {
     time: number;
     rockets: number;
     bombs: number;
+    /** Strength of the red damage flash, 0 for none. */
+    damageFlash: number;
 }
 
 /**
@@ -59,6 +63,8 @@ export class Hud {
     private readonly _needle = document.createElement('div');
     private readonly _counter = document.createElement('img');
     private readonly _centerText = document.createElement('div');
+    /** Red layer over the 3D view after a hit; the HUD controls draw on top of it. */
+    private readonly _flash = document.createElement('div');
     private _centerTimer = 0;
     private _counterTimer = 0;
 
@@ -66,6 +72,13 @@ export class Hud {
         const e = this.element;
         e.className = 'hud';
         Object.assign(e.style, { position: 'absolute', inset: '0', pointerEvents: 'none', overflow: 'hidden' });
+        Object.assign(this._flash.style, {
+            position: 'absolute',
+            inset: '0',
+            background: 'rgb(255, 0, 0)',
+            opacity: '0',
+        });
+        e.append(this._flash);
 
         const centerPrint = this._add('centerPrint', 'div');
         centerPrint.style.background = `url(${ui('hudfill.png')}) center / 100% 100%`;
@@ -177,6 +190,7 @@ export class Hud {
         }
         this._healthFill.style.opacity = String(alpha);
         this._energyFill.style.width = `${Math.max(0, Math.min(1, state.energy)) * 100}%`;
+        this._flash.style.opacity = String(Math.min(state.damageFlash, MAX_FLASH_OPACITY));
 
         this._parts.get('lapPos')!.textContent = `Pos: ${state.position}  Lap: ${state.lap}`;
         this._parts.get('lapTime')!.textContent = `Time: ${formatRaceTime(state.time)}`;

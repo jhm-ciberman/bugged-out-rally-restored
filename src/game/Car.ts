@@ -24,6 +24,10 @@ const BOOST_LEVEL = 100;
 
 /** Smallest crash damage that counts (`WheeledVehicleData::onImpact`). */
 const IMPACT_DAMAGE_THRESHOLD = 4.5;
+/** Strongest damage flash (`WheeledVehicleData::onDamage`). */
+const MAX_DAMAGE_FLASH = 0.75;
+/** How much the damage flash fades each tick (`ShapeBase::sDamageFlashDec`). */
+const DAMAGE_FLASH_FADE = 0.007;
 
 /**
  * A car on the track: its physics body plus its model, drawn smoothly between physics ticks.
@@ -40,6 +44,8 @@ export class Car {
     rockets = 0;
     /** Magno bombs carried. */
     bombs = 0;
+    /** Strength of the red screen flash after a hit, 0 to 0.75 (`getDamageFlash`). */
+    damageFlash = 0;
     /** Damage taken; the car is wrecked at `vehicle.data.maxDamage`. */
     damage = 0;
     /** What wrecked the car last, for scoring. */
@@ -103,6 +109,7 @@ export class Car {
      * Runs one physics tick.
      */
     tick(move: VehicleMove): void {
+        this.damageFlash = Math.max(0, this.damageFlash - DAMAGE_FLASH_FADE);
         this._prevPosition.copy(this.vehicle.rigid.linPosition);
         this._prevRotation.copy(this.vehicle.rigid.angPosition);
         if (this.boosting) {
@@ -154,7 +161,10 @@ export class Car {
      */
     applyDamage(amount: number, cause: DamageCause = { kind: 'zone', source: null }): void {
         if (this.isWrecked) return;
-        this.damage = Math.min(this.vehicle.data.maxDamage, this.damage + Math.abs(amount));
+        const maxDamage = this.vehicle.data.maxDamage;
+        this.damage = Math.min(maxDamage, this.damage + Math.abs(amount));
+        // `WheeledVehicleData::onDamage`.
+        this.damageFlash = Math.min(MAX_DAMAGE_FLASH, this.damageFlash + (Math.abs(amount) / maxDamage) * 2);
         if (this.isWrecked) this.wreckCause = cause;
     }
 
