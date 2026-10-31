@@ -6,6 +6,7 @@ import type { AudioSystem } from '../audio/AudioSystem';
 import { ChaseCamera } from '../camera/ChaseCamera';
 import type { IUpdatable } from '../IUpdatable';
 import { VehicleInput } from '../input/VehicleInput';
+import { TIRE_DUST } from '../render/Particles';
 import type { MissionObject } from '../torque/MissionFile';
 import { parseRotation, parseVector } from '../torque/TorqueMath';
 import { TICK_SECONDS, type VehicleMove } from '../vehicle/WheeledVehicle';
@@ -21,6 +22,8 @@ import { Zones } from './Zones';
 const MAX_TICKS_PER_FRAME = 8;
 /** Water damage per period (`$DamageWater`, rescheduled every 50 ms). */
 const WATER_DAMAGE = 0.075;
+/** Milliseconds of emitter time per dust particle (`tireEmitter.ejectionPeriodMS`). */
+const DUST_PERIOD_MS = 10;
 const WATER_DAMAGE_PERIOD = 0.05;
 /** Seconds a wrecked car stays gone before it reappears at its last checkpoint (native `onDestroy`). */
 const RESPAWN_SECONDS = 4;
@@ -62,6 +65,7 @@ export class RaceSession implements IUpdatable {
     readonly combat: Combat;
     readonly hazards: Hazards;
     private _accumulator = 0;
+    private readonly _dustBudget = new Map<Car, number>();
     private _botsStarted = false;
 
     private constructor(
@@ -130,7 +134,10 @@ export class RaceSession implements IUpdatable {
         if (ticks === MAX_TICKS_PER_FRAME) this._accumulator = 0;
 
         const alpha = this._accumulator / TICK_SECONDS;
-        for (const car of this.cars) car.draw(alpha, deltaSeconds);
+        for (const car of this.cars) {
+            car.draw(alpha, deltaSeconds);
+            this._emitDust(car, deltaSeconds);
+        }
         this.combat.update(deltaSeconds);
         this.hazards.update();
         this._chase.update(this.player.vehicle, this.player.renderPosition, this.player.renderRotation);
@@ -183,6 +190,35 @@ export class RaceSession implements IUpdatable {
         this._input.dispose();
         this.combat.dispose();
         for (const car of this.cars) car.dispose();
+    }
+
+    /**
+     * Throws dust behind wheels that slip on the ground (`WheeledVehicle::updateWheelParticles`):
+     * more dust the faster the car goes and the more the tire slips.
+     */
+    private _emitDust(car: Car, dt: number): void {
+        const v = car.vehicle;
+        const speed = v.speed;
+        if (speed <= 1 || car.respawnTimer > 0) return;
+        let budget = this._dustBudget.get(car) ?? 0;
+        for (const w of v.wheels) {
+            if (!w.contact || w.slip <= 0) continue;
+            // Emitter time in ms for this frame, one particle per 10 ms of it.
+            budget += (dt * (speed / v.data.maxWheelSpeed) * 1000 * w.slip) / DUST_PERIOD_MS;
+            const count = Math.floor(budget);
+            if (count > 0) {
+                budget -= count;
+                this.combat.particles.burst(
+                    TIRE_DUST,
+                    w.contactPoint,
+                    count,
+                    1,
+                    1,
+                    v.rigid.linVelocity.clone().multiplyScalar(0.1),
+                );
+            }
+        }
+        this._dustBudget.set(car, budget);
     }
 
     private _updateRespawn(car: Car): void {

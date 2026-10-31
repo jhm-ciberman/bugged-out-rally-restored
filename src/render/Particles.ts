@@ -182,3 +182,19 @@ export const EXPLOSION_SPARKS: ParticleLook = {
     dragCoefficient: 1,
     useInvAlpha: false,
 };
+
+/** Dust kicked up by slipping tires (`TireParticle` in deathcar.cs). */
+export const TIRE_DUST: ParticleLook = {
+    texture: '~/data/shapes/car/dustParticle',
+    lifetime: 1,
+    lifetimeVariance: 0,
+    colors: [
+        [0.46, 0.36, 0.26, 1],
+        [0.46, 0.46, 0.36, 0],
+    ],
+    sizes: [0.8, 1],
+    times: [0, 1],
+    gravityCoefficient: -0.1,
+    dragCoefficient: 2,
+    useInvAlpha: true,
+};
