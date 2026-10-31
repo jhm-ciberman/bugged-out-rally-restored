@@ -27,9 +27,11 @@ export class VehicleInput {
     private _mouseYaw = 0;
     private _resetRequested = false;
     private _rightMouse = false;
+    private _leftMouse = false;
 
     constructor(private readonly _element: HTMLElement) {
         _element.addEventListener('click', this._onClick);
+        _element.addEventListener('contextmenu', this._onContextMenu);
         document.addEventListener('mousemove', this._onMouseMove);
         window.addEventListener('keydown', this._onKeyDown);
         window.addEventListener('keyup', this._onKeyUp);
@@ -59,6 +61,16 @@ export class VehicleInput {
     }
 
     /**
+     * Returns the fire buttons: A or left mouse fires a Zinger, D or right mouse drops a Magno bomb (`config.cs`).
+     */
+    triggers(): { fire: boolean; drop: boolean } {
+        return {
+            fire: this._keys.has('KeyA') || this._leftMouse,
+            drop: this._keys.has('KeyD') || this._rightMouse,
+        };
+    }
+
+    /**
      * Returns whether the player asked to put the car back on the track since the last call.
      */
     consumeReset(): boolean {
@@ -72,6 +84,7 @@ export class VehicleInput {
      */
     dispose(): void {
         this._element.removeEventListener('click', this._onClick);
+        this._element.removeEventListener('contextmenu', this._onContextMenu);
         document.removeEventListener('mousemove', this._onMouseMove);
         window.removeEventListener('keydown', this._onKeyDown);
         window.removeEventListener('keyup', this._onKeyUp);
@@ -86,8 +99,15 @@ export class VehicleInput {
         this._element.requestPointerLock({ unadjustedMovement: true })?.catch(() => this._element.requestPointerLock());
     };
 
+    // Right mouse drops bombs, so it must not open the browser menu.
+    private readonly _onContextMenu = (e: Event): void => {
+        e.preventDefault();
+    };
+
     private readonly _onMouseButton = (e: MouseEvent): void => {
-        if (e.button === 2) this._rightMouse = e.type === 'mousedown';
+        const down = e.type === 'mousedown';
+        if (e.button === 0) this._leftMouse = down && document.pointerLockElement === this._element;
+        if (e.button === 2) this._rightMouse = down;
     };
 
     // Keys released while the window is not focused never send keyup; forget them.
@@ -95,6 +115,7 @@ export class VehicleInput {
         if (document.pointerLockElement === this._element && document.hasFocus()) return;
         this._keys.clear();
         this._rightMouse = false;
+        this._leftMouse = false;
     };
 
     private readonly _onMouseMove = (e: MouseEvent): void => {

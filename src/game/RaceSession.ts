@@ -9,6 +9,7 @@ import { VehicleInput } from '../input/VehicleInput';
 import type { MissionObject } from '../torque/MissionFile';
 import { parseRotation, parseVector } from '../torque/TorqueMath';
 import { TICK_SECONDS, type VehicleMove } from '../vehicle/WheeledVehicle';
+import { Combat, type Triggers } from '../weapons/Combat';
 import type { Track } from '../world/Track';
 import { Car } from './Car';
 import { Pickups } from './Pickups';
@@ -52,12 +53,15 @@ export class RaceSession implements IUpdatable {
     readonly bots: Bot[] = [];
     readonly pickups: Pickups;
     readonly zones: Zones;
+    /** Weapons, projectiles and explosions. Add `combat.object` to the scene. */
+    readonly combat: Combat;
     private _accumulator = 0;
     private _botsStarted = false;
 
     private constructor(
         readonly track: Track,
         player: Car,
+        combat: Combat,
         private readonly _input: VehicleInput,
         private readonly _chase: ChaseCamera,
         events: RaceEvents,
@@ -65,6 +69,8 @@ export class RaceSession implements IUpdatable {
         this.race = new Race(track, events);
         this.pickups = new Pickups(track.items);
         this.zones = new Zones(track);
+        this.combat = combat;
+        combat.onDamage = ({ target, amount }) => target.applyDamage(amount);
         this.player = player;
         this.cars.push(player);
         this.playerRacer = this.race.addRacer('Player', player.vehicle);
@@ -84,6 +90,7 @@ export class RaceSession implements IUpdatable {
         const session = new RaceSession(
             track,
             player,
+            new Combat(track.collision, models, audio),
             new VehicleInput(setup.element),
             new ChaseCamera(setup.camera, track.collision),
             setup.events ?? {},
@@ -115,6 +122,7 @@ export class RaceSession implements IUpdatable {
 
         const alpha = this._accumulator / TICK_SECONDS;
         for (const car of this.cars) car.draw(alpha, deltaSeconds);
+        this.combat.update(deltaSeconds);
         this._chase.update(this.player.vehicle, this.player.renderPosition, this.player.renderRotation);
     }
 
@@ -190,6 +198,14 @@ export class RaceSession implements IUpdatable {
             bot.car.tick(driving ? bot.nextMove() : IDLE_MOVE);
         }
         this.zones.tick(this.cars);
+
+        // Weapons work before the green light too; only the throttle waits for it.
+        const triggers = new Map<Car, Triggers>([[this.player, this._input.triggers()]]);
+        if (racing) {
+            for (const bot of this.bots)
+                triggers.set(bot.car, bot.triggers(TICK_SECONDS, this.cars, this.track.collision));
+        }
+        this.combat.tick(TICK_SECONDS, this.cars, triggers);
 
         this.pickups.tick(TICK_SECONDS, this.cars);
         this.race.tick(TICK_SECONDS);

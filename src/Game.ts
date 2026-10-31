@@ -96,6 +96,7 @@ export class Game {
             await hud.attach(session, this._models);
             this._hud = hud;
             for (const car of session.cars) this._scene.add(car.view.object);
+            this._scene.add(session.combat.object);
             this._entities.push(session, hud);
             this._session = session;
             const music = track.find('MissionGroup')?.fields.get('musictrack');

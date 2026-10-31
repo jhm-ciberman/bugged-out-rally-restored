@@ -84,6 +84,8 @@ export interface VehicleData {
     readonly eye: THREE.Vector3;
     /** Camera node position in body space; the chase camera ray starts here. */
     readonly cameraNode: THREE.Vector3;
+    /** Weapon mount points in body space: slot 1 (Zinger) and slot 2 (Magno bomb), at nodes `mount1`/`mount2`. */
+    readonly mounts: readonly [THREE.Vector3, THREE.Vector3];
     readonly wheels: readonly WheelMount[];
     /** Points of the collision mesh, in body space. */
     readonly collisionHull: readonly THREE.Vector3[];
@@ -234,6 +236,7 @@ export function getVehicleData(name: string): VehicleData {
         cameraDecay: num(block, 'cameraDecay', 0),
         eye: vec(nodes.eye),
         cameraNode: vec(nodes.cam ?? nodes.eye),
+        mounts: [vec(nodes.mount1 ?? nodes.eye), vec(nodes.mount2 ?? nodes.eye)],
         wheels: buildWheels(
             nodes,
             tire(String(block.frontTire)),
