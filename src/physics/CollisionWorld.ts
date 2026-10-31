@@ -62,7 +62,8 @@ export class CollisionWorld {
             const merged = mergeGeometries(geometries, false);
             this._bvh = new MeshBVH(merged);
             merged.boundsTree = this._bvh;
-            this._mesh = new THREE.Mesh(merged);
+            // Rays must hit both sides: the engine's ray casts have no back-face rule.
+            this._mesh = new THREE.Mesh(merged, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }));
             this._mesh.raycast = acceleratedRaycast;
         } else {
             this._bvh = null;
@@ -119,9 +120,18 @@ export class CollisionWorld {
             const i = hit.faceIndex * 3;
             _tri.setFromAttributeAndIndices(pos, i, i + 1, i + 2);
             _tri.getNormal(_n);
+            if (_n.lengthSq() < 0.5) continue; // degenerate triangle
             if (_n.dot(_p.subVectors(center, hit.point)) < 0) _n.negate();
-            const distance = _p.subVectors(p, hit.point).dot(_n);
-            if (distance < tolerance) out.push({ point: p.clone(), normal: _n.clone(), distance });
+            const offset = _p.subVectors(p, hit.point);
+            const planeDistance = offset.dot(_n);
+            const distance = offset.length();
+            if (distance > Math.abs(planeDistance) + 1e-3) {
+                // The nearest point is on an edge or corner: use the true distance and the direction to it.
+                if (planeDistance < 0 || distance >= tolerance) continue;
+                out.push({ point: p.clone(), normal: offset.clone().divideScalar(distance), distance });
+            } else if (planeDistance < tolerance) {
+                out.push({ point: p.clone(), normal: _n.clone(), distance: planeDistance });
+            }
         }
     }
 

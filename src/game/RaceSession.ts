@@ -13,9 +13,12 @@ import type { Track } from '../world/Track';
 import { Car } from './Car';
 import { Pickups } from './Pickups';
 import { Race, type RaceEvents, type Racer } from './Race';
+import { Zones } from './Zones';
 
 /** Most ticks run in one frame, so a long stall does not freeze the game catching up. */
 const MAX_TICKS_PER_FRAME = 8;
+/** Seconds a wrecked car stays gone before it reappears at its last checkpoint (native `onDestroy`). */
+const RESPAWN_SECONDS = 4;
 
 const IDLE_MOVE: VehicleMove = { throttle: 0, yaw: 0, brake: false, jet: false };
 
@@ -48,6 +51,7 @@ export class RaceSession implements IUpdatable {
     readonly cars: Car[] = [];
     readonly bots: Bot[] = [];
     readonly pickups: Pickups;
+    readonly zones: Zones;
     private _accumulator = 0;
     private _botsStarted = false;
 
@@ -60,6 +64,7 @@ export class RaceSession implements IUpdatable {
     ) {
         this.race = new Race(track, events);
         this.pickups = new Pickups(track.items);
+        this.zones = new Zones(track);
         this.player = player;
         this.cars.push(player);
         this.playerRacer = this.race.addRacer('Player', player.vehicle);
@@ -90,6 +95,7 @@ export class RaceSession implements IUpdatable {
             const car = cars[i];
             const racer = session.race.addRacer(entry.name, car.vehicle);
             const bot = new Bot(car, racer, track, i);
+            bot.autopilot.onGiveUp = () => session.wreck(car);
             racer.onCheckpoint = () => bot.markCheckpoint();
             session.cars.push(car);
             session.bots.push(bot);
@@ -116,12 +122,20 @@ export class RaceSession implements IUpdatable {
      * Puts the player's car back at the last checkpoint it crossed, standing upright.
      */
     resetPlayer(): void {
-        const cp = this.playerRacer.lastCheckpoint;
-        // Keep only the heading, so a car that crashed upside down comes back on its wheels.
-        const forward = new THREE.Vector3(0, 1, 0).applyQuaternion(cp.rotation);
-        const yaw = Math.atan2(-forward.x, forward.y);
-        const upright = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), yaw);
-        this.player.place(cp.position.clone().add(new THREE.Vector3(0, 0, 1)), upright);
+        this._placeAtCheckpoint(this.player);
+    }
+
+    /**
+     * Takes a car out of the race: it loses its ammo, disappears and comes back at its last
+     * checkpoint after a few seconds (`WheeledVehicleData::onDestroyed`).
+     */
+    wreck(car: Car): void {
+        if (car.respawnTimer > 0) return;
+        car.respawnTimer = RESPAWN_SECONDS;
+        car.rockets = 0;
+        car.bombs = 0;
+        car.boosting = false;
+        car.view.object.visible = false;
     }
 
     /**
@@ -130,6 +144,27 @@ export class RaceSession implements IUpdatable {
     dispose(): void {
         this._input.dispose();
         for (const car of this.cars) car.dispose();
+    }
+
+    private _updateRespawn(car: Car): void {
+        car.respawnTimer -= TICK_SECONDS;
+        if (car.respawnTimer > 0) return;
+        car.respawnTimer = 0;
+        car.damage = 0;
+        this._placeAtCheckpoint(car);
+        car.view.object.visible = true;
+        this.bots.find((b) => b.car === car)?.respawned();
+    }
+
+    private _placeAtCheckpoint(car: Car): void {
+        const racer = this.race.racers.find((r) => r.vehicle === car.vehicle);
+        if (!racer) return;
+        const cp = racer.lastCheckpoint;
+        // Keep only the heading, so a car that crashed upside down comes back on its wheels.
+        const forward = new THREE.Vector3(0, 1, 0).applyQuaternion(cp.rotation);
+        const yaw = Math.atan2(-forward.x, forward.y);
+        const upright = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), yaw);
+        car.place(cp.position.clone().add(new THREE.Vector3(0, 0, 1)), upright);
     }
 
     private _tick(): void {
@@ -143,8 +178,18 @@ export class RaceSession implements IUpdatable {
         // The throttle is ignored until the green light; steering and brakes are not (`moveForward`).
         if (!racing) move.throttle = 0;
         if (this._input.consumeReset()) this.resetPlayer();
-        this.player.tick(move);
-        for (const bot of this.bots) bot.car.tick(racing ? bot.nextMove(TICK_SECONDS) : IDLE_MOVE);
+        for (const car of this.cars) {
+            if (car.isWrecked) this.wreck(car);
+            if (car.respawnTimer > 0) this._updateRespawn(car);
+        }
+
+        this.player.tick(this.player.respawnTimer > 0 ? { ...IDLE_MOVE, brake: true } : move);
+        for (const bot of this.bots) {
+            bot.autopilot.slow = this.zones.inSlowZone(bot.car.vehicle.rigid.worldCenterOfMass);
+            const driving = racing && bot.car.respawnTimer <= 0;
+            bot.car.tick(driving ? bot.nextMove() : IDLE_MOVE);
+        }
+        this.zones.tick(this.cars);
 
         this.pickups.tick(TICK_SECONDS, this.cars);
         this.race.tick(TICK_SECONDS);

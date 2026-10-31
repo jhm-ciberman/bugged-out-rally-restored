@@ -43,7 +43,7 @@ fs.rmSync(dest, { recursive: true, force: true });
 copyTree(path.join(source, 'game-files', 'bor', 'data'), path.join(dest, 'data'), DATA_EXTENSIONS);
 copyTree(path.join(source, 'game-files', 'bor', 'client', 'ui'), path.join(dest, 'client', 'ui'), DATA_EXTENSIONS);
 copyTree(path.join(source, 'game-files', 'common'), path.join(dest, 'common'), DATA_EXTENSIONS);
-for (const kind of ['cars', 'props', 'interiors']) {
+for (const kind of ['cars', 'props', 'interiors', 'collision']) {
     copyTree(path.join(source, 'extracted-models', kind), path.join(dest, 'models', kind), MODEL_EXTENSIONS);
 }
 

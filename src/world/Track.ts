@@ -17,6 +17,7 @@ import { WaterSurface } from './WaterSurface';
 
 /** Seconds per turn of a spinning item (`sRotationSpeed` in item.cc). */
 const ITEM_SPIN_SECONDS = 3;
+const Z_AXIS = new THREE.Vector3(0, 0, 1);
 
 /**
  * A loaded race track: the mission objects, the terrain and the scene built from them.
@@ -103,6 +104,9 @@ export class Track implements IUpdatable {
             if (obj.className === 'Item') items.push(model);
             if (obj.className === 'Item' && obj.fields.get('rotate') === '1') spinners.push(model);
         }
+        // Static shapes collide through their collision mesh only (interiors use their visible surfaces).
+        const shapeSolids = await Promise.all(objects.map((o) => placeCollision(o, models)));
+        for (const solid of shapeSolids) if (solid) solids.push(solid);
         const collision = new CollisionWorld(terrain, solids);
 
         return new Track(number, objects, terrain, root, collision, visibleDistance, sky, water, spinners, items);
@@ -121,13 +125,10 @@ export class Track implements IUpdatable {
         updateIflTextures(this._time);
         this._sky?.update();
         this._water?.update(deltaSeconds);
-        const angle = (this._time / ITEM_SPIN_SECONDS) * Math.PI * 2;
-        for (const s of this._spinners) {
-            const base = s.userData.baseRotation as THREE.Quaternion;
-            s.quaternion
-                .copy(base)
-                .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), angle));
-        }
+        // Item::renderImage replaces the rotation with a spin about the shape origin, clockwise from above.
+        // Shapes like the cherry sit off their origin, so they swing around a little, as in the original.
+        const angle = -(this._time / ITEM_SPIN_SECONDS) * Math.PI * 2;
+        for (const s of this._spinners) s.quaternion.setFromAxisAngle(Z_AXIS, angle);
     }
 }
 
@@ -192,22 +193,32 @@ export async function loadTexture(torquePath: string): Promise<THREE.Texture> {
     return tex;
 }
 
-async function placeObject(obj: MissionObject, models: ModelLibrary): Promise<THREE.Object3D | null> {
-    let shape: string | undefined;
+/**
+ * Returns the shape or interior file a mission object draws, or `undefined` for objects without one.
+ */
+function shapeOf(obj: MissionObject): string | undefined {
     switch (obj.className) {
         case 'InteriorInstance':
-            shape = obj.fields.get('interiorfile');
-            break;
+            return obj.fields.get('interiorfile');
         case 'TSStatic':
-            shape = obj.fields.get('shapename');
-            break;
+            return obj.fields.get('shapename');
         case 'StaticShape':
         case 'Item':
-            shape = shapeForDatablock(obj.fields.get('datablock') ?? '');
-            break;
+            return shapeForDatablock(obj.fields.get('datablock') ?? '');
         default:
-            return null;
+            return undefined;
     }
+}
+
+function applyMissionTransform(model: THREE.Object3D, obj: MissionObject): void {
+    model.position.copy(parseVector(obj.fields.get('position')));
+    model.quaternion.copy(parseRotation(obj.fields.get('rotation')));
+    model.scale.copy(parseVector(obj.fields.get('scale'), 1));
+}
+
+async function placeObject(obj: MissionObject, models: ModelLibrary): Promise<THREE.Object3D | null> {
+    if (!['InteriorInstance', 'TSStatic', 'StaticShape', 'Item'].includes(obj.className)) return null;
+    const shape = shapeOf(obj);
     if (!shape) {
         console.warn(`No shape for ${obj.className} ${obj.name} (${obj.fields.get('datablock')})`);
         return null;
@@ -215,10 +226,18 @@ async function placeObject(obj: MissionObject, models: ModelLibrary): Promise<TH
     const model = await models.instantiate(shape);
     if (!model) return null;
     model.name = obj.name || obj.className;
-    model.position.copy(parseVector(obj.fields.get('position')));
-    model.quaternion.copy(parseRotation(obj.fields.get('rotation')));
-    model.scale.copy(parseVector(obj.fields.get('scale'), 1));
+    applyMissionTransform(model, obj);
     model.userData.mission = obj;
-    model.userData.baseRotation = model.quaternion.clone();
+    return model;
+}
+
+/**
+ * Returns the placed collision mesh of a static shape, or `null` when it is not solid.
+ */
+async function placeCollision(obj: MissionObject, models: ModelLibrary): Promise<THREE.Object3D | null> {
+    if (obj.className !== 'TSStatic' && obj.className !== 'StaticShape') return null;
+    const shape = shapeOf(obj);
+    const model = shape ? await models.instantiateCollision(shape) : null;
+    if (model) applyMissionTransform(model, obj);
     return model;
 }

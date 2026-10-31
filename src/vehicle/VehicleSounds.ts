@@ -42,7 +42,6 @@ export class VehicleSounds {
         for (const loop of [s._engine, s._squeal, s._jet]) if (loop) object.add(loop);
         audio.preload(p.hardImpactSound);
         audio.preload(p.softImpactSound);
-        vehicle.onImpact = (change) => s._impact(change.length());
         return s;
     }
 
@@ -78,7 +77,6 @@ export class VehicleSounds {
             if (loop?.isPlaying) loop.stop();
             loop?.removeFromParent();
         }
-        this._vehicle.onImpact = null;
     }
 
     private _setLoop(loop: THREE.PositionalAudio | null, on: boolean, volume: number): void {
@@ -91,7 +89,10 @@ export class VehicleSounds {
         }
     }
 
-    private _impact(speed: number): void {
+    /**
+     * Plays the crash sound for a hit that changed the car's speed by `speed` m/s.
+     */
+    impact(speed: number): void {
         // Client impact sounds pick hard or soft by the change of speed (`Vehicle::updatePos`).
         const data = this._vehicle.data;
         let profile: string | null = null;

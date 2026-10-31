@@ -10,6 +10,8 @@ const _local = new THREE.Vector3();
 export class TriggerVolume {
     /** The trigger datablock, such as `CheckPointTrigger`. */
     readonly datablock: string;
+    /** The trigger's forward axis in the world (`getForwardVector`). */
+    readonly forward = new THREE.Vector3(0, 1, 0);
     private readonly _inverse = new THREE.Matrix4();
     private readonly _box = new THREE.Box3();
 
@@ -41,6 +43,7 @@ export class TriggerVolume {
             parseVector(mission.fields.get('scale'), 1),
         );
         this._inverse.copy(world).invert();
+        this.forward.applyQuaternion(parseRotation(mission.fields.get('rotation')));
     }
 
     /** The trigger's name in the mission, such as `checkpoint3`. */

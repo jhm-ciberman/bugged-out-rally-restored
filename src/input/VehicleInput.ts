@@ -12,7 +12,7 @@ const MOUSE_TURN_PER_PIXEL = 0.01;
  * Turns keyboard and mouse input into vehicle moves, with the original bindings (`config.cs`):
  * W/Up drive, S/Down reverse, Space brakes, the mouse or Left/Right steer.
  *
- * Steering is relative, like in the original: it stays where you leave it.
+ * Steering is relative: the mouse and keys turn the wheel, and the vehicle lets it return to center.
  */
 export class VehicleInput {
     /** Mouse sensitivity multiplier (`$pref::Input::LinkMouseSensitivity`). */
@@ -20,12 +20,17 @@ export class VehicleInput {
     private readonly _keys = new Set<string>();
     private _mouseYaw = 0;
     private _resetRequested = false;
+    private _rightMouse = false;
 
     constructor(private readonly _element: HTMLElement) {
         _element.addEventListener('click', this._onClick);
         document.addEventListener('mousemove', this._onMouseMove);
         window.addEventListener('keydown', this._onKeyDown);
         window.addEventListener('keyup', this._onKeyUp);
+        window.addEventListener('mousedown', this._onMouseButton);
+        window.addEventListener('mouseup', this._onMouseButton);
+        window.addEventListener('blur', this._onBlur);
+        document.addEventListener('pointerlockchange', this._onBlur);
     }
 
     /**
@@ -40,7 +45,8 @@ export class VehicleInput {
             throttle: forward - backward,
             yaw: this._mouseYaw + right - left,
             brake: this._keys.has('Space'),
-            jet: false,
+            // The exe jets while the bomb trigger is held (`Vehicle::updateMove`, 0x4bd527).
+            jet: this._keys.has('KeyD') || this._rightMouse,
         };
         this._mouseYaw = 0;
         return move;
@@ -63,10 +69,26 @@ export class VehicleInput {
         document.removeEventListener('mousemove', this._onMouseMove);
         window.removeEventListener('keydown', this._onKeyDown);
         window.removeEventListener('keyup', this._onKeyUp);
+        window.removeEventListener('mousedown', this._onMouseButton);
+        window.removeEventListener('mouseup', this._onMouseButton);
+        window.removeEventListener('blur', this._onBlur);
+        document.removeEventListener('pointerlockchange', this._onBlur);
     }
 
     private readonly _onClick = (): void => {
-        void this._element.requestPointerLock();
+        // Raw mouse counts, like DirectInput, where the browser supports it.
+        this._element.requestPointerLock({ unadjustedMovement: true })?.catch(() => this._element.requestPointerLock());
+    };
+
+    private readonly _onMouseButton = (e: MouseEvent): void => {
+        if (e.button === 2) this._rightMouse = e.type === 'mousedown';
+    };
+
+    // Keys released while the window is not focused never send keyup; forget them.
+    private readonly _onBlur = (): void => {
+        if (document.pointerLockElement === this._element && document.hasFocus()) return;
+        this._keys.clear();
+        this._rightMouse = false;
     };
 
     private readonly _onMouseMove = (e: MouseEvent): void => {

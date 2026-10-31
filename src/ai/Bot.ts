@@ -6,12 +6,9 @@ import type { VehicleMove } from '../vehicle/WheeledVehicle';
 import type { Track } from '../world/Track';
 import { Autopilot } from './Autopilot';
 
-/** Seconds a wrecked or hopelessly stuck bot waits before it reappears (native `onDestroy`). */
-const RESPAWN_SECONDS = 4;
-
 /**
  * A computer driver (`AIClientVeh` in aiclientveh.cs): drives Path1 then Path3 marker by marker, forever,
- * and goes back to its last checkpoint when it wrecks or stays stuck.
+ * and picks the line up again from its last checkpoint after a respawn.
  */
 export class Bot {
     readonly autopilot: Autopilot;
@@ -21,7 +18,6 @@ export class Bot {
     /** Path and node when the bot crossed its last correct checkpoint (`markPathIndex`, `markLastNodeIndex`). */
     private _markPath = 0;
     private _markNode = 0;
-    private _respawnTimer = 0;
 
     constructor(
         readonly car: Car,
@@ -32,12 +28,6 @@ export class Bot {
         this.autopilot = new Autopilot(car.vehicle);
         this._paths = botPaths(track, index);
         this.autopilot.onReach = () => this._moveToNextNode();
-        this.autopilot.onGiveUp = () => this.wreck();
-    }
-
-    /** Whether the bot is waiting to respawn. */
-    get isWrecked(): boolean {
-        return this._respawnTimer > 0;
     }
 
     /**
@@ -58,27 +48,17 @@ export class Bot {
     }
 
     /**
-     * Takes the bot out of the race for a few seconds, then puts it back at its last checkpoint.
-     */
-    wreck(): void {
-        this._respawnTimer = RESPAWN_SECONDS;
-    }
-
-    /**
      * Returns the move for the next tick.
      */
-    nextMove(dt: number): VehicleMove {
-        if (this._respawnTimer > 0) {
-            this._respawnTimer -= dt;
-            if (this._respawnTimer <= 0) this._respawn();
-            return { throttle: 0, yaw: 0, brake: true, jet: false };
-        }
+    nextMove(): VehicleMove {
         return this.autopilot.nextMove();
     }
 
-    private _respawn(): void {
-        const cp = this.racer.lastCheckpoint;
-        this.car.place(cp.position, cp.rotation);
+    /**
+     * Picks up the racing line again from the marker saved at the last checkpoint, after a respawn
+     * (`AIClientVeh::setRespawnPoint`).
+     */
+    respawned(): void {
         this.autopilot.reset();
         this._path = this._markPath;
         this._node = this._markNode;

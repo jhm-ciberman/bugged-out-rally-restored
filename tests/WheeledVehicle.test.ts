@@ -48,10 +48,25 @@ describe('WheeledVehicle', () => {
         car.setTransform(new THREE.Vector3(0, 0, 102), new THREE.Quaternion());
         run(car, 60);
         run(car, 60, 1);
-        run(car, 1, 1, 0.3);
-        run(car, 60, 1);
+        run(car, 60, 1, 0.3);
         // Heading turns clockwise from above: +Y toward +X.
         const forward = new THREE.Vector3(0, 1, 0).applyQuaternion(car.rigid.angPosition);
         expect(forward.x).toBeGreaterThan(0.2);
+    });
+
+    it('lets the steering return toward center on ticks without steering input (exe 0x4bd46d)', () => {
+        const car = new WheeledVehicle(getVehicleData('Cockroach'), flatWorld());
+        car.setTransform(new THREE.Vector3(0, 0, 102), new THREE.Quaternion());
+        run(car, 1, 0, 0.5);
+        expect(car.steering).toBeCloseTo(0.5);
+        run(car, 1, 0, 0);
+        expect(car.steering).toBeCloseTo(0.45);
+        run(car, 1, 0, 0.1);
+        expect(car.steering).toBeCloseTo(0.55);
+    });
+
+    it('starts with no boost energy (ShapeBase::onNewDataBlock)', () => {
+        const car = new WheeledVehicle(getVehicleData('Cockroach'), flatWorld());
+        expect(car.energy).toBe(0);
     });
 });

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { useTorqueFog } from '../render/TorqueFog';
-import { assetUrl } from './AssetPaths';
+import { assetUrl, hasAsset } from './AssetPaths';
 import { animateWithIfl, iflForMaterial } from './IflTexture';
 
 /**
@@ -19,8 +19,23 @@ export class ModelLibrary {
      * such as `~/data/bor/fence5.dif`, or `null` when no converted model exists.
      */
     async instantiate(torquePath: string): Promise<THREE.Object3D | null> {
-        const url = modelUrl(torquePath);
-        if (!url) return null;
+        const path = modelPath(torquePath);
+        return path ? this._instantiate(path) : null;
+    }
+
+    /**
+     * Returns a new copy of the collision mesh of a Torque shape (its `collision-1` detail),
+     * or `null` when the shape has none and so is not solid.
+     */
+    async instantiateCollision(torquePath: string): Promise<THREE.Object3D | null> {
+        const path = modelPath(torquePath);
+        if (!path?.startsWith('models/props/')) return null;
+        const collision = path.replace('models/props/', 'models/collision/');
+        return hasAsset(collision) ? this._instantiate(collision) : null;
+    }
+
+    private async _instantiate(path: string): Promise<THREE.Object3D | null> {
+        const url = assetUrl(path);
         let pending = this._cache.get(url);
         if (!pending) {
             pending = this._load(url);
@@ -49,9 +64,10 @@ export class ModelLibrary {
 }
 
 /**
- * Maps a Torque model path to the URL of its converted `.glb`, or `null` for unknown types.
+ * Maps a Torque model path to the path of its converted `.glb` under `public/assets`,
+ * or `null` for unknown types.
  */
-export function modelUrl(torquePath: string): string | null {
+export function modelPath(torquePath: string): string | null {
     const path = torquePath
         .replace(/\\/g, '/')
         .replace(/^~\/data\//i, '')
@@ -59,14 +75,14 @@ export function modelUrl(torquePath: string): string | null {
     const ext = path.slice(path.lastIndexOf('.'));
     const stem = path.slice(0, path.lastIndexOf('.'));
     if (ext === '.dif') {
-        return assetUrl(`models/interiors/${stem.slice(stem.lastIndexOf('/') + 1)}.glb`);
+        return `models/interiors/${stem.slice(stem.lastIndexOf('/') + 1)}.glb`;
     }
     if (ext === '.dts') {
         if (stem.startsWith('shapes/car/')) {
-            return assetUrl(`models/cars/${stem.slice('shapes/car/'.length)}.glb`);
+            return `models/cars/${stem.slice('shapes/car/'.length)}.glb`;
         }
         const local = stem.startsWith('shapes/') ? stem.slice('shapes/'.length) : stem;
-        return assetUrl(`models/props/${local.replace(/\//g, '__')}.glb`);
+        return `models/props/${local.replace(/\//g, '__')}.glb`;
     }
     return null;
 }

@@ -7,6 +7,9 @@ import { VehicleView } from '../vehicle/VehicleView';
 import { type VehicleMove, WheeledVehicle } from '../vehicle/WheeledVehicle';
 import type { Track } from '../world/Track';
 
+/** Smallest crash damage that counts (`WheeledVehicleData::onImpact`). */
+const IMPACT_DAMAGE_THRESHOLD = 4.5;
+
 /**
  * A car on the track: its physics body plus its model, drawn smoothly between physics ticks.
  */
@@ -27,10 +30,17 @@ export class Car {
 
     private _sounds: VehicleSounds | null = null;
 
+    /** Set by a boost pad: the car jets until its energy runs out (native `setBoostLevel`). */
+    boosting = false;
+    /** Seconds left before a wrecked car comes back, or 0 while driving. */
+    respawnTimer = 0;
+
     private constructor(
         readonly vehicle: WheeledVehicle,
         readonly view: VehicleView,
-    ) {}
+    ) {
+        vehicle.onImpact = (change) => this._impact(change.length());
+    }
 
     /**
      * Creates car type `carName` on `track` at the given pose.
@@ -67,6 +77,10 @@ export class Car {
     tick(move: VehicleMove): void {
         this._prevPosition.copy(this.vehicle.rigid.linPosition);
         this._prevRotation.copy(this.vehicle.rigid.angPosition);
+        if (this.boosting) {
+            move.jet = true;
+            if (this.vehicle.energy <= 0) this.boosting = false;
+        }
         this.vehicle.tick(move);
     }
 
@@ -95,9 +109,34 @@ export class Car {
     }
 
     /**
+     * Fills the boost energy and starts jetting, like a boost pad (`setBoostLevel(100)`).
+     *
+     * What the native flag does is not known; jetting until the energy is gone is the closest stock behavior.
+     */
+    startBoost(): void {
+        this.vehicle.energy = this.vehicle.data.maxEnergy;
+        this.boosting = true;
+    }
+
+    /**
+     * Adds damage, up to the wreck level.
+     */
+    applyDamage(amount: number): void {
+        if (this.isWrecked) return;
+        this.damage = Math.min(this.vehicle.data.maxDamage, this.damage + Math.abs(amount));
+    }
+
+    /**
      * Stops the car's sounds.
      */
     dispose(): void {
         this._sounds?.dispose();
+    }
+
+    private _impact(speed: number): void {
+        this._sounds?.impact(speed);
+        // WheeledVehicleData::onImpact: damage only for hits above 4.5.
+        const damage = speed * this.vehicle.data.speedDamageScale;
+        if (damage > IMPACT_DAMAGE_THRESHOLD) this.applyDamage(damage);
     }
 }

@@ -12,6 +12,8 @@ const GRAVITY = -20;
 const REST_TOLERANCE = 0.5;
 /** Consecutive resting sub-steps before the body goes to sleep (`sRestCount`). */
 const REST_COUNT = 10;
+/** Steering kept on a tick without steering input (`Vehicle::updateMove` in the exe, 0x4bd46d). */
+const STEERING_RETURN = 0.9;
 /** Most impulse passes per sub-step, a safety net for the engine's open-ended loop. */
 const MAX_COLLISION_PASSES = 16;
 
@@ -77,7 +79,8 @@ export class WheeledVehicle {
     throttle = 0;
     braking = false;
     jetting = false;
-    energy: number;
+    /** Jet energy. Cars start empty; boost pads fill it. */
+    energy = 0;
     /** Chase camera lag offset, in world space (`mCameraOffset`). */
     readonly cameraOffset = new THREE.Vector3();
     /** Called when the body hits something harder than `minImpactSpeed`, with the change of velocity. */
@@ -97,7 +100,6 @@ export class WheeledVehicle {
         r.restitution = data.bodyRestitution;
         r.setCenterOfMass(data.massCenter);
         r.setObjectInertiaBox(data.inertiaBox);
-        this.energy = data.maxEnergy;
         this.wheels = data.wheels.map((mount) => ({
             mount,
             extension: 1,
@@ -164,6 +166,8 @@ export class WheeledVehicle {
         this.throttle = move.throttle;
         this.braking = move.brake;
         const max = this.data.maxSteeringAngle;
+        // The shipped exe lets go of the wheel: no steering input means 10% back toward center per tick.
+        if (move.yaw === 0) this.steering *= STEERING_RETURN;
         this.steering = THREE.MathUtils.clamp(this.steering + move.yaw, -max, max);
 
         if (move.jet) {

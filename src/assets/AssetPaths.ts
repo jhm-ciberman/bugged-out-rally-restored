@@ -48,3 +48,11 @@ export function findAssetByName(fileName: string): string | null {
     }
     return null;
 }
+
+/**
+ * Whether a file exists under `public/assets` (path relative to that folder).
+ */
+export function hasAsset(relativePath: string): boolean {
+    if (!manifest) throw new Error('Asset manifest not loaded');
+    return manifest.has(relativePath.toLowerCase());
+}

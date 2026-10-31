@@ -18,6 +18,18 @@ interface DescriptionJson {
 /** Default volume of every audio channel (`$pref::Audio::channelVolumeN`). */
 const CHANNEL_VOLUME = 0.8;
 
+/** Key that toggles mute. */
+const MUTE_KEY = 'KeyM';
+const MUTE_STORAGE_KEY = 'bor.muted';
+
+function readStoredMute(): boolean {
+    try {
+        return localStorage.getItem(MUTE_STORAGE_KEY) === '1';
+    } catch {
+        return false;
+    }
+}
+
 const profiles = audio.profiles as Record<string, ProfileJson>;
 const descriptions = audio.descriptions as Record<string, DescriptionJson>;
 
@@ -32,6 +44,7 @@ export class AudioSystem {
     private readonly _loader = new THREE.AudioLoader();
     private readonly _buffers = new Map<string, Promise<AudioBuffer | null>>();
     private _music: THREE.Audio | null = null;
+    private _muted = false;
 
     constructor(camera: THREE.Camera) {
         camera.add(this.listener);
@@ -40,6 +53,27 @@ export class AudioSystem {
         };
         window.addEventListener('pointerdown', resume);
         window.addEventListener('keydown', resume);
+        window.addEventListener('keydown', (e) => {
+            if (e.code === MUTE_KEY && !e.repeat) this.muted = !this.muted;
+        });
+        // ?mute silences this page only, without changing the remembered setting.
+        this._muted = new URLSearchParams(window.location.search).has('mute') || readStoredMute();
+        this.listener.setMasterVolume(this._muted ? 0 : 1);
+    }
+
+    /** Whether all sound is silenced. Toggled with the M key, remembered between visits. */
+    get muted(): boolean {
+        return this._muted;
+    }
+
+    set muted(value: boolean) {
+        this._muted = value;
+        this.listener.setMasterVolume(value ? 0 : 1);
+        try {
+            localStorage.setItem(MUTE_STORAGE_KEY, value ? '1' : '0');
+        } catch {
+            // Storage can be unavailable (private mode); muting still works for this visit.
+        }
     }
 
     /**
