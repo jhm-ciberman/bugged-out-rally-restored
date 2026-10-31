@@ -49,6 +49,11 @@ export class Combat {
     private readonly _armed = new Map<Car, Armed>();
     private readonly _flying: Flying[] = [];
 
+    /** The sound system projectiles play through, if any. */
+    get audio(): AudioSystem | null {
+        return this._audio;
+    }
+
     constructor(
         private readonly _world: CollisionWorld,
         private readonly _models: ModelLibrary,
@@ -131,7 +136,17 @@ export class Combat {
         if (data === ROCKET) velocity.z += ROCKET_LIFT;
         else muzzle.z += BOMB_DROP_HEIGHT;
 
-        const projectile = new Projectile(data, car, muzzle, velocity);
+        this.launch(data, car, muzzle, velocity);
+        if (this._audio) {
+            void this._audio.play3d(data === ROCKET ? 'RocketFireSound' : 'BombFireSound', muzzle, this.object);
+        }
+    }
+
+    /**
+     * Starts a projectile at `position` with `velocity`. `shooter` is never hit or chased by it.
+     */
+    launch(data: ProjectileData, shooter: Car | null, position: THREE.Vector3, velocity: THREE.Vector3): void {
+        const projectile = new Projectile(data, shooter, position, velocity);
         const flying: Flying = { projectile, model: null };
         this._flying.push(flying);
         void this._models.instantiate(data.shapeFile).then((model) => {
@@ -140,9 +155,6 @@ export class Combat {
             model.position.copy(projectile.position);
             this.object.add(model);
         });
-        if (this._audio) {
-            void this._audio.play3d(data === ROCKET ? 'RocketFireSound' : 'BombFireSound', muzzle, this.object);
-        }
     }
 
     private _explode(projectile: Projectile, point: THREE.Vector3): void {

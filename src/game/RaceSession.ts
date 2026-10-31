@@ -12,6 +12,7 @@ import { TICK_SECONDS, type VehicleMove } from '../vehicle/WheeledVehicle';
 import { Combat, type Triggers } from '../weapons/Combat';
 import type { Track } from '../world/Track';
 import { Car } from './Car';
+import { Hazards } from './Hazards';
 import { Pickups } from './Pickups';
 import { Race, type RaceEvents, type Racer } from './Race';
 import { Zones } from './Zones';
@@ -56,6 +57,7 @@ export class RaceSession implements IUpdatable {
     readonly zones: Zones;
     /** Weapons, projectiles and explosions. Add `combat.object` to the scene. */
     readonly combat: Combat;
+    readonly hazards: Hazards;
     private _accumulator = 0;
     private _botsStarted = false;
 
@@ -71,6 +73,7 @@ export class RaceSession implements IUpdatable {
         this.pickups = new Pickups(track.items);
         this.zones = new Zones(track);
         this.combat = combat;
+        this.hazards = new Hazards(track, combat, combat.audio);
         combat.onDamage = ({ target, source, amount }) => target.applyDamage(amount, { kind: 'projectile', source });
         this.player = player;
         this.cars.push(player);
@@ -225,6 +228,7 @@ export class RaceSession implements IUpdatable {
                 triggers.set(bot.car, bot.triggers(TICK_SECONDS, this.cars, this.track.collision));
         }
         this.combat.tick(TICK_SECONDS, this.cars, triggers);
+        this.hazards.tick(TICK_SECONDS, this.cars);
 
         this.pickups.tick(TICK_SECONDS, this.cars);
         this.race.tick(TICK_SECONDS);
