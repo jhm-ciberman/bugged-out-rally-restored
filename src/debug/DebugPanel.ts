@@ -96,8 +96,8 @@ export class DebugPanel {
         const slider = document.createElement('input');
         slider.type = 'range';
         slider.min = '0.5';
-        slider.max = '4';
-        slider.step = '0.25';
+        slider.max = '12';
+        slider.step = '0.5';
         slider.value = String(_game.viewDistanceScale);
         slider.style.width = '140px';
         slider.addEventListener('input', () => {
