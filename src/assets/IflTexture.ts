@@ -40,6 +40,8 @@ export async function animateWithIfl(material: THREE.MeshLambertMaterial, iflPat
             const [file, count] = line.split(/\s+/);
             const texture = await loader.loadAsync(assetUrl(dir + file));
             texture.colorSpace = THREE.NoColorSpace;
+            // Model UVs come from glTF, which does not flip images; the loader flips by default.
+            texture.flipY = false;
             texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
             return { texture, seconds: Number(count ?? 1) / IFL_FPS };
         }),
