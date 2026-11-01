@@ -22,6 +22,8 @@ THREE.ColorManagement.enabled = false;
 export interface RaceStart {
     /** Track number, 1 to 8. */
     readonly track: number;
+    /** The player's name, shown to the other racers and on the scoreboard. */
+    readonly playerName: string;
     /** Vehicle datablock of the player's car, such as `Cockroach`. */
     readonly carName: string;
     readonly event: RaceEvent;
@@ -121,6 +123,7 @@ export class Game {
         const session = await RaceSession.create({
             track,
             models: this.models,
+            playerName: start.playerName,
             carName: start.carName,
             event: start.event,
             winnings: start.winnings,

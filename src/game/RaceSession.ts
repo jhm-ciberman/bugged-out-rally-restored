@@ -106,6 +106,8 @@ const idleMove = (brake = false): VehicleMove => ({ throttle: 0, yaw: 0, brake, 
 export interface RaceSetup {
     readonly track: Track;
     readonly models: ModelLibrary;
+    /** The player's name, shown to the other racers and on the scoreboard. */
+    readonly playerName: string;
     /** Car type the player drives, such as `Cockroach`. */
     readonly carName: string;
     readonly event: RaceEvent;
@@ -144,6 +146,7 @@ export class RaceSession implements IUpdatable {
 
     private constructor(
         readonly track: Track,
+        playerName: string,
         player: Car,
         combat: Combat,
         private readonly _input: VehicleInput,
@@ -158,7 +161,7 @@ export class RaceSession implements IUpdatable {
         combat.onDamage = ({ target, source, amount }) => target.applyDamage(amount, { kind: 'projectile', source });
         this.player = player;
         this.cars.push(player);
-        this.playerRacer = this.race.addRacer('Player', player.vehicle);
+        this.playerRacer = this.race.addRacer(playerName, player.vehicle);
     }
 
     /** Whether the player's keys and mouse drive the car. Off while a menu or the scoreboard is up. */
@@ -199,6 +202,7 @@ export class RaceSession implements IUpdatable {
         const player = await Car.create(setup.carName, track, models, ...at(roster.length), audio);
         const session = new RaceSession(
             track,
+            setup.playerName,
             player,
             new Combat(track.collision, models, audio),
             new VehicleInput(setup.element),

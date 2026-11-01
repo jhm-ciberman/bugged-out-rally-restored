@@ -154,6 +154,7 @@ export class App {
         try {
             await this._game.startRace({
                 track: plan.track,
+                playerName: plan.profile.name,
                 carName: plan.car.datablock,
                 event: plan.event,
                 winnings: plan.profile.points,
