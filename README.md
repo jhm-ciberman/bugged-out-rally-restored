@@ -1,6 +1,9 @@
 # Bugged Out Rally, Restored
 
-A browser port of **Bugged Out Rally** (Inoculous Games, 2004), a combat racing game where you drive bugs on wheels. Built with three.js and TypeScript, using the original assets and rules.
+A browser port of **Bugged Out Rally**, a combat racing game where you drive bugs on wheels. Built with three.js and TypeScript, using the original assets and rules.
+
+> [!NOTE]
+> Bugged Out Rally is not my game. It was made in **2004** by **Inoculous Games** and is now **abandonware**: the studio is no longer active and the game can no longer be bought. This is a fan restoration to keep it playable.
 
 ![Screenshot of Bugged Out Rally, Restored](./art/bugged-out-rally-screenshot.jpg)
 
@@ -106,7 +109,7 @@ Some original bugs that broke a feature by accident were fixed. Ones that are pa
 
 ## 🙏 Credits
 
-Bugged Out Rally was made by **Inoculous Games**:
+Bugged Out Rally was made in **2004** by **Inoculous Games**:
 
 - **Akio Cullum**: producer, programmer and art.
 - **Thomas Cullum**: soundtrack.
@@ -119,6 +122,6 @@ All game assets (models, textures, sounds and music) belong to their original au
 
 It is not my intention to break anyone's copyright in any way. I played Bugged Out Rally as a child and loved it, and this project exists only to preserve it so future generations can still play it.
 
-The game is abandonware: the studio is no longer active and there is no way to buy it. The original release also does not run reliably on modern systems: it works on some Windows 11 machines and fails on others.
+Bugged Out Rally (2004) is abandonware: the studio is no longer active and there is no way to buy it. The original release also does not run reliably on modern systems: it works on some Windows 11 machines and fails on others.
 
 If you hold the rights to Bugged Out Rally and want this removed, please open an issue and it will be taken down as soon as possible.
