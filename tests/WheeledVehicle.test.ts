@@ -101,4 +101,9 @@ describe('WheeledVehicle', () => {
         expect(local.z).not.toBe(0);
         expect(car.boxCenter(new THREE.Vector3()).distanceTo(expected)).toBeLessThan(1e-6);
     });
+
+    it('uses the tire radius the original game reports (shape height / 2 - 0.12)', () => {
+        // Read from the running original with `echo(CarTireRated_1919.radius)` and friends.
+        expect(getVehicleData('Cockroach').wheels[0].tire.radius).toBeCloseTo(0.790121, 4);
+    });
 });

@@ -2,6 +2,9 @@ import * as THREE from 'three';
 import datablocks from '../game/data/vehicleDatablocks.json';
 import shapes from '../game/data/vehicleShapes.json';
 
+/** How much smaller the exe makes every tire than half its shape height, in meters (read from the game). */
+const TIRE_RADIUS_INSET = 0.12;
+
 /**
  * A tire datablock (`WheeledVehicleTire`).
  */
@@ -125,8 +128,9 @@ function tire(name: string): TireData {
     const wheel = (shapes.wheels as Record<string, { bounds: { min: number[]; max: number[] } }>)[shapeName(shapeFile)];
     return {
         shapeFile,
-        // WheeledVehicleTire::preload: radius = bounds.len_z() / 2.
-        radius: wheel ? (wheel.bounds.max[2] - wheel.bounds.min[2]) / 2 : 0.6,
+        // Stock WheeledVehicleTire::preload uses half the shape height; the exe reports 0.12 m less for
+        // every tire, so the cars sit that much lower.
+        radius: wheel ? (wheel.bounds.max[2] - wheel.bounds.min[2]) / 2 - TIRE_RADIUS_INSET : 0.6,
         staticFriction: num(block, 'staticFriction', 1),
         kineticFriction: num(block, 'kineticFriction', 0.5),
         lateralForce: num(block, 'lateralForce', 10),
