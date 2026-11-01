@@ -264,9 +264,10 @@ export class RaceSession implements IUpdatable {
         if (car.respawnTimer > 0) return;
         car.respawnTimer = RESPAWN_SECONDS;
         // Scoring (`GameConnection::onDeath`): a crash costs a point; a kill also gives the shooter one.
-        // Zone damage goes around onDeath, so it does not score.
+        // Zone damage goes around onDeath, so it does not score, and nothing scores once the player has
+        // finished (`$Game::Cycling`).
         const cause = car.wreckCause;
-        if (cause && cause.kind !== 'zone') {
+        if (cause && cause.kind !== 'zone' && this.playerRacer.finishTime === null) {
             car.score--;
             if (cause.source && cause.source !== car) cause.source.score++;
         }
