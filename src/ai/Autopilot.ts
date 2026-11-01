@@ -9,7 +9,7 @@ const STUCK_RADIUS = 2.5;
 const STUCK_REVERSE_TICKS = 50;
 /** Stuck ticks before giving up and respawning at the last checkpoint. */
 const STUCK_RESPAWN_TICKS = 300;
-/** Throttle on straights, and in sharp turns. Moves clamp it to 1. */
+/** Throttle on straights, and in sharp turns. Bot moves are not clamped to 1 (`Move::clamp` is for the network). */
 const BASE_THROTTLE = 1.1;
 const TURN_THROTTLE = 0.6;
 /** Heading alignment (cosine) below which a turn counts as sharp. */
@@ -99,7 +99,7 @@ export class Autopilot {
             else if (speed > SLOW_ZONE_COAST_SPEED) throttle = 0;
             else throttle = Math.min(throttle, 1);
         }
-        move.throttle = Math.min(throttle, 1);
+        move.throttle = throttle;
         move.yaw = wanted - v.steering;
 
         // Stuck (native AI tick, 0x4c9c96): a car that stays within 2.5 m of where it was keeps counting.

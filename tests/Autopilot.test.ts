@@ -54,4 +54,15 @@ describe('Autopilot', () => {
         pilot.nextMove();
         expect(reached).toBe(true);
     });
+
+    it('asks for more than full throttle on a straight, since bot moves are never clamped', () => {
+        // The engine clamps only the moves it sends over the network (`Move::clamp`); a bot's stay as they are.
+        const car = new WheeledVehicle(getVehicleData('Cockroach'), flatWorld());
+        car.setTransform(new THREE.Vector3(0, 0, 102), new THREE.Quaternion());
+        settle(car);
+        const pilot = new Autopilot(car);
+        pilot.reset();
+        pilot.moveTo(new THREE.Vector3(0, 200, 100));
+        expect(pilot.nextMove().throttle).toBeCloseTo(1.1);
+    });
 });
