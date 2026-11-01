@@ -27,26 +27,43 @@ const COLORS: Record<ChatColor, string> = {
 const MAX_LINES = 40;
 /** Height of one line, the font size (`ChatHud::addLine`). */
 const LINE_HEIGHT = 16;
-/** Left and top of the visible window, in pixels from the screen corner (`ChatScrollHud` in ChatHud.gui). */
+/** Top of the log's parent control, in pixels from the top of the screen (ChatHud.gui). */
+const PARENT_Y = 50;
+/** Left and top of the visible window, in pixels from the screen corner (`ChatScrollHud`). */
 const WINDOW_X = 8;
-const WINDOW_Y = 58;
+const WINDOW_Y = PARENT_Y + 8;
 /** Height of the visible window, the shortest of the three sizes (`$pref::ChatHudLength = 1`). */
 const WINDOW_HEIGHT = 72;
 /** The text sits one pixel inside the window, on each side. */
 const TEXT_INSET = 1;
 /** Indent of a message's wrapped lines (`lineContinuedIndex`). */
 const CONTINUED_INDENT = 10;
+/** Lines one page up or down moves: a window's worth, less one (`ChatHud::pageUp`). */
+const PAGE_LINES = Math.floor(WINDOW_HEIGHT / LINE_HEIGHT) - 1;
+/**
+ * The "Dwn" sign shown while scrolled back (`chatPageDown`): its size, its distance from the right edge of the
+ * log's parent and its top inside it.
+ */
+const DOWN_SIGN = { w: 36, h: 14, right: 180, top: 58 };
 
 /**
  * The race's message log at the top left (`MainChatHud`): who joined, who wrecked, what the player picked up.
- * New lines go at the bottom, and once the window is full the oldest scroll out of view at the top.
+ * New lines go at the bottom, and once the window is full the oldest scroll out of view at the top. Page up and
+ * page down scroll back through older lines.
  */
 export class ChatHud {
     readonly element = document.createElement('div');
+    private readonly _window = document.createElement('div');
     private readonly _lines = document.createElement('div');
+    private readonly _down = document.createElement('div');
+    /** Lines scrolled back from the newest, 0 when the newest line is at the bottom. */
+    private _linesBack = 0;
+    /** Width of the screen, which places the "Dwn" sign. */
+    private _screenWidth = 0;
 
     constructor() {
-        Object.assign(this.element.style, {
+        Object.assign(this.element.style, { position: 'absolute', left: '0', top: '0' });
+        Object.assign(this._window.style, {
             position: 'absolute',
             left: `${WINDOW_X}px`,
             top: `${WINDOW_Y}px`,
@@ -61,13 +78,31 @@ export class ChatHud {
             font: arialFont(LINE_HEIGHT, true),
             lineHeight: `${LINE_HEIGHT}px`,
         });
-        this.element.append(this._lines);
+        // A `GuiButtonProfile` button: gold, black border, white centered Arial 14.
+        this._down.textContent = 'Dwn';
+        Object.assign(this._down.style, {
+            position: 'absolute',
+            top: `${PARENT_Y + DOWN_SIGN.top}px`,
+            width: `${DOWN_SIGN.w}px`,
+            height: `${DOWN_SIGN.h}px`,
+            boxSizing: 'border-box',
+            border: '1px solid #000',
+            background: 'rgb(255, 192, 55)',
+            color: '#fff',
+            font: arialFont(14),
+            lineHeight: `${DOWN_SIGN.h - 2}px`,
+            textAlign: 'center',
+            display: 'none',
+        });
+        this._window.append(this._lines);
+        this.element.append(this._window, this._down);
     }
 
     /**
-     * Adds a message at the bottom of the log.
+     * Adds a message at the bottom of the log. While scrolled back, the view stays where it is.
      */
     addLine(text: string, color: ChatColor = ChatColor.plain): void {
+        const before = this._lines.offsetHeight;
         const line = document.createElement('div');
         line.textContent = text;
         Object.assign(line.style, {
@@ -76,22 +111,51 @@ export class ChatHud {
             textIndent: `-${CONTINUED_INDENT}px`,
         });
         this._lines.append(line);
-        while (this._lines.childElementCount > MAX_LINES) this._lines.firstElementChild?.remove();
-        this._scrollToBottom();
+        if (this._linesBack > 0) {
+            this._linesBack += Math.round((this._lines.offsetHeight - before) / LINE_HEIGHT);
+        } else {
+            // The oldest messages are only dropped while the newest are in view.
+            while (this._lines.childElementCount > MAX_LINES) this._lines.firstElementChild?.remove();
+        }
+        this._layout();
+    }
+
+    /**
+     * Scrolls back a page of older lines.
+     */
+    pageUp(): void {
+        const hidden = this._lines.offsetHeight - WINDOW_HEIGHT - this._linesBack * LINE_HEIGHT;
+        const lines = Math.floor(hidden / LINE_HEIGHT + 0.5);
+        if (lines <= 0) return;
+        this._linesBack += Math.min(lines, PAGE_LINES);
+        this._layout();
+    }
+
+    /**
+     * Scrolls forward a page, toward the newest line.
+     */
+    pageDown(): void {
+        this._linesBack -= Math.min(this._linesBack, PAGE_LINES);
+        this._layout();
     }
 
     /**
      * Sizes the log for a screen `width` pixels wide.
      */
     resize(width: number): void {
-        // The log's dialog is laid out for a 640 pixel screen and stretched to the real one: its box keeps a
-        // fixed margin on the right of a parent that takes 400/640 of the width.
-        this.element.style.width = `${Math.max(0, (width * 400) / 640 - 144)}px`;
-        this._scrollToBottom();
+        this._screenWidth = width;
+        this._layout();
     }
 
-    private _scrollToBottom(): void {
+    private _layout(): void {
+        // The log's dialog is laid out for a 640 pixel screen and stretched to the real one: its box keeps a
+        // fixed margin on the right of a parent that takes 400/640 of the width.
+        const parentWidth = (this._screenWidth * 400) / 640;
+        this._window.style.width = `${Math.max(0, parentWidth - 144)}px`;
+        this._down.style.left = `${parentWidth - DOWN_SIGN.right}px`;
         const overflow = this._lines.offsetHeight + TEXT_INSET - WINDOW_HEIGHT;
-        this._lines.style.top = `${overflow > 0 ? TEXT_INSET - overflow : TEXT_INSET}px`;
+        const top = overflow > 0 ? TEXT_INSET - overflow : TEXT_INSET;
+        this._lines.style.top = `${top + this._linesBack * LINE_HEIGHT}px`;
+        this._down.style.display = this._linesBack > 0 ? '' : 'none';
     }
 }

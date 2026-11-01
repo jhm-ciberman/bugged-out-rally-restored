@@ -36,6 +36,7 @@ export class RaceHud {
         this.hud = new Hud(_parent);
         this._targets = new TargetHud(this.hud.element);
         for (const p of ['AudioCountBeep', 'AudioGoBeep']) _audio.preload(p);
+        window.addEventListener('keydown', this._onKey);
     }
 
     /**
@@ -134,11 +135,20 @@ export class RaceHud {
      * Removes the HUD and the finish screen.
      */
     dispose(): void {
+        window.removeEventListener('keydown', this._onKey);
         if (this._finishTimer) clearTimeout(this._finishTimer);
         this._finish?.dispose();
         this._finish = null;
         this.hud.element.remove();
     }
+
+    // Page up and page down scroll the message log (`pageMessageHudUp` in config.cs).
+    private readonly _onKey = (e: KeyboardEvent): void => {
+        if (e.code === 'PageUp') this.hud.chat.pageUp();
+        else if (e.code === 'PageDown') this.hud.chat.pageDown();
+        else return;
+        e.preventDefault();
+    };
 
     private _showFinish(): void {
         if (this._finish || !this._session) return;
