@@ -26,6 +26,9 @@ export function iflForMaterial(materialName: string): string | null {
  * animates textures. Call {@link updateIflTextures} every frame.
  */
 export async function animateWithIfl(material: THREE.MeshLambertMaterial, iflPath: string): Promise<void> {
+    // Registered at once, so copies made before the frames load can join it.
+    const entry: (typeof animated)[number] = { materials: [material], frames: [], total: 0 };
+    animated.push(entry);
     const text = await (await fetch(assetUrl(iflPath))).text();
     const dir = iflPath.replace(/[^/]*$/, '');
     const lines = text
@@ -42,10 +45,13 @@ export async function animateWithIfl(material: THREE.MeshLambertMaterial, iflPat
         }),
     );
     if (frames.length === 0) return;
-    material.map = frames[0].texture;
-    material.color.set(0xffffff);
-    material.needsUpdate = true;
-    animated.push({ materials: [material], frames, total: frames.reduce((t, f) => t + f.seconds, 0) });
+    for (const m of entry.materials) {
+        m.map = frames[0].texture;
+        m.color.set(0xffffff);
+        m.needsUpdate = true;
+    }
+    entry.frames = frames;
+    entry.total = frames.reduce((t, f) => t + f.seconds, 0);
 }
 
 /**
@@ -53,6 +59,7 @@ export async function animateWithIfl(material: THREE.MeshLambertMaterial, iflPat
  */
 export function updateIflTextures(time: number): void {
     for (const a of animated) {
+        if (a.frames.length === 0) continue;
         let t = time % a.total;
         let frame = a.frames[0];
         for (const f of a.frames) {
@@ -61,5 +68,15 @@ export function updateIflTextures(time: number): void {
             t -= f.seconds;
         }
         for (const m of a.materials) m.map = frame.texture;
+    }
+}
+
+/**
+ * Makes `copy` follow the same animated texture as `original`, if `original` has one.
+ */
+export function shareIflAnimation(original: THREE.Material, copy: THREE.Material): void {
+    if (!(copy instanceof THREE.MeshLambertMaterial)) return;
+    for (const a of animated) {
+        if (a.materials.includes(original as THREE.MeshLambertMaterial)) a.materials.push(copy);
     }
 }

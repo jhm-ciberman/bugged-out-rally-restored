@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { shareIflAnimation } from '../assets/IflTexture';
 import type { MissionObject } from '../torque/MissionFile';
 import type { Car } from './Car';
 
@@ -9,6 +10,9 @@ export const MAX_ROCKETS = 5;
 export const MAX_BOMBS = 5;
 /** Damage a cherry repairs (`HealthKit.repairAmount`). */
 const REPAIR_AMOUNT = 25;
+/** Delay and length of the fade-in of a respawned item, in seconds (`Item::respawn`). */
+const FADE_DELAY = 0.1;
+const FADE_SECONDS = 1;
 /** Extra reach around the car body when touching an item, in meters. */
 const REACH = 1;
 
@@ -19,7 +23,11 @@ interface PickupItem {
     readonly kind: 'rocket' | 'bomb' | 'health';
     readonly model: THREE.Object3D;
     readonly position: THREE.Vector3;
+    /** The item's own copies of its materials, so it can fade alone. */
+    readonly materials: readonly THREE.Material[];
     hiddenFor: number;
+    /** Seconds since the item came back, while it fades in, or null when fully shown. */
+    fadingFor: number | null;
 }
 
 /**
@@ -28,6 +36,8 @@ interface PickupItem {
 export interface PickupEvent {
     readonly car: Car;
     readonly kind: PickupItem['kind'];
+    /** Where the item was. */
+    readonly position: THREE.Vector3;
 }
 
 /**
@@ -50,7 +60,16 @@ export class Pickups {
                       : datablock === 'healthkit'
                         ? 'health'
                         : null;
-            if (kind) this._items.push({ kind, model, position: model.position.clone(), hiddenFor: 0 });
+            if (kind) {
+                this._items.push({
+                    kind,
+                    model,
+                    position: model.position.clone(),
+                    materials: ownMaterials(model),
+                    hiddenFor: 0,
+                    fadingFor: null,
+                });
+            }
         }
     }
 
@@ -61,15 +80,27 @@ export class Pickups {
         for (const item of this._items) {
             if (item.hiddenFor > 0) {
                 item.hiddenFor -= dt;
-                if (item.hiddenFor <= 0) item.model.visible = true;
-                continue;
+                if (item.hiddenFor > 0) continue;
+                // Back and solid, but invisible until it fades in (`Item::respawn`).
+                item.fadingFor = 0;
+                item.model.visible = true;
+            }
+            if (item.fadingFor !== null) {
+                item.fadingFor += dt;
+                const opacity = THREE.MathUtils.clamp((item.fadingFor - FADE_DELAY) / FADE_SECONDS, 0, 1);
+                for (const m of item.materials) {
+                    m.opacity = opacity;
+                    m.transparent = opacity < 1;
+                }
+                if (opacity >= 1) item.fadingFor = null;
             }
             for (const car of cars) {
                 if (car.isWrecked || car.respawnTimer > 0 || !touches(car, item.position)) continue;
                 if (this._take(car, item.kind)) {
                     item.hiddenFor = RESPAWN_SECONDS;
+                    item.fadingFor = null;
                     item.model.visible = false;
-                    this.onPickup?.({ car, kind: item.kind });
+                    this.onPickup?.({ car, kind: item.kind, position: item.position });
                     break;
                 }
             }
@@ -106,4 +137,22 @@ function touches(car: Car, point: THREE.Vector3): boolean {
         _local.z > b.min.z - REACH &&
         _local.z < b.max.z + REACH
     );
+}
+
+/**
+ * Gives every mesh of `model` its own copy of its material and returns the copies.
+ */
+function ownMaterials(model: THREE.Object3D): THREE.Material[] {
+    const out: THREE.Material[] = [];
+    model.traverse((obj) => {
+        if (!(obj instanceof THREE.Mesh)) return;
+        const copies = [obj.material].flat().map((m: THREE.Material) => {
+            const copy = m.clone();
+            shareIflAnimation(m, copy);
+            return copy;
+        });
+        obj.material = Array.isArray(obj.material) ? copies : copies[0];
+        out.push(...copies);
+    });
+    return out;
 }

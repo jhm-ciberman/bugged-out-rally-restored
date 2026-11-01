@@ -59,8 +59,9 @@ export class RaceHud {
      */
     async attach(session: RaceSession, models: ModelLibrary): Promise<void> {
         this._session = session;
-        session.pickups.onPickup = ({ car, kind }) => {
-            if (car === session.player && kind !== 'health') void this._audio.play2d('AmmoPickupSound');
+        // Ammo pickups play where the item was, for every car (`ammo::onPickup` uses ServerPlay3D).
+        session.pickups.onPickup = ({ kind, position }) => {
+            if (kind !== 'health') void this._audio.play3d('AmmoPickupSound', position, session.combat.object);
         };
         await this._arrow.load(models);
     }
