@@ -1,9 +1,9 @@
 import { ACTIONS, type Action, bind, bindingOf, inputName } from '../../input/KeyBindings';
-import { ABOUT_TEXT, MEDIUM_TEXT } from '../GuiControls';
+import { ABOUT_TEXT, arialFont, MEDIUM_TEXT } from '../GuiControls';
 import { MenuScreen, rel, rel640 } from './MenuScreen';
 
 /** `GuiTextListProfile`: Arial 14, black. */
-const LIST_TEXT = { font: '14px Arial, sans-serif', color: '#000' };
+const LIST_TEXT = { font: arialFont(14), color: '#000' };
 /** Left edge of the binding column, in pixels (`columns = "0 240"`). */
 const BINDING_COLUMN = 240;
 
@@ -81,7 +81,7 @@ export class ControlMenu extends MenuScreen {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            font: 'bold 16px Arial, sans-serif',
+            font: arialFont(16, true),
             color: '#fff',
             textShadow: '1px 1px 0 #000',
         });

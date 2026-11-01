@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { assetUrl } from '../assets/AssetPaths';
 import type { Car } from '../game/Car';
 import type { RaceSession } from '../game/RaceSession';
+import { arialFont } from './GuiControls';
 
 /** Name tags sit this far above a car's origin (`verticalOffset` in PlayGui.gui). */
 const NAME_HEIGHT = 0.2;
@@ -95,7 +96,7 @@ export class TargetHud {
             const fadeDistance = visibleDistance * DISTANCE_FADE;
             const opacity = dist < fadeDistance ? 1 : 1 - (dist - fadeDistance) / (visibleDistance - fadeDistance);
             const tag = this._tag(shown++);
-            tag.name.textContent = nameOf(session, car);
+            tag.name.textContent = session.nameOf(car);
             tag.name.style.opacity = String(opacity);
             tag.fill.style.width = `${car.health * 100}%`;
             tag.root.style.left = `${((_p.x + 1) / 2) * width}px`;
@@ -128,7 +129,7 @@ export class TargetHud {
             const name = document.createElement('div');
             Object.assign(name.style, {
                 position: 'absolute',
-                font: '14px Arial, sans-serif',
+                font: arialFont(14),
                 color: NAME_COLOR,
                 whiteSpace: 'nowrap',
                 transform: 'translate(-50%, -100%)',
@@ -155,10 +156,6 @@ export class TargetHud {
         tag.root.style.display = '';
         return tag;
     }
-}
-
-function nameOf(session: RaceSession, car: Car): string {
-    return session.race.racers.find((r) => r.vehicle === car.vehicle)?.name ?? '';
 }
 
 /**

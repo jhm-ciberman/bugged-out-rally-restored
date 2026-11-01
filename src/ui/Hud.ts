@@ -1,4 +1,6 @@
 import { assetUrl } from '../assets/AssetPaths';
+import { ChatHud } from './ChatHud';
+import { arialFont } from './GuiControls';
 import { type GuiRect, placeControl } from './GuiLayout';
 
 const ui = (file: string) => assetUrl(`client/ui/${file}`);
@@ -57,6 +59,8 @@ export interface HudState {
  */
 export class Hud {
     readonly element = document.createElement('div');
+    /** The message log, a dialog drawn over the HUD. */
+    readonly chat = new ChatHud();
     private readonly _parts = new Map<keyof typeof RECTS, HTMLElement>();
     private readonly _healthFill = document.createElement('div');
     private readonly _energyFill = document.createElement('div');
@@ -84,7 +88,7 @@ export class Hud {
         centerPrint.style.background = `url(${ui('hudfill.png')}) center / 100% 100%`;
         centerPrint.style.display = 'none';
         Object.assign(this._centerText.style, {
-            font: '14px Arial, sans-serif',
+            font: arialFont(14),
             color: 'rgb(0, 255, 0)',
             textAlign: 'center',
             lineHeight: '20px',
@@ -109,7 +113,7 @@ export class Hud {
         for (const key of ['lapPos', 'lapTime', 'zingCount', 'bombCount'] as const) {
             const t = this._add(key, 'div');
             Object.assign(t.style, {
-                font: 'bold 24px Arial, sans-serif',
+                font: arialFont(24, true),
                 color: 'rgb(255, 192, 55)',
                 textShadow: '1px 1px 0 #000',
                 whiteSpace: 'pre',
@@ -142,6 +146,7 @@ export class Hud {
         }
         // Draw the counts above their icons, like the GUI file order (count after icon).
         for (const key of ['zingCount', 'bombCount'] as const) e.append(this._parts.get(key)!);
+        e.append(this.chat.element);
 
         parent.append(e);
         this.resize(window.innerWidth, window.innerHeight);
@@ -152,6 +157,7 @@ export class Hud {
      */
     resize(width: number, height: number): void {
         for (const [key, el] of this._parts) placeControl(el, RECTS[key], width, height);
+        this.chat.resize(width);
     }
 
     /**

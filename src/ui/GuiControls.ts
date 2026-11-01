@@ -76,17 +76,28 @@ export function setButtonEnabled(button: HTMLButtonElement, enabled: boolean, bi
     button.style.backgroundImage = `url(${assetUrl(`client/ui/${bitmap}_${enabled ? 'n' : 'i'}.png`)})`;
 }
 
+/** Height of Arial's character cell (ascent plus descent) for a 1 px font, from the font's metrics. */
+const ARIAL_CELL_HEIGHT = (1854 + 434) / 2048;
+
+/**
+ * Returns the CSS font for the Arial of a Torque font profile of `size`. Torque sizes a font by the height of
+ * its whole character cell, so its letters come out smaller than a CSS font of the same size.
+ */
+export function arialFont(size: number, bold = false): string {
+    return `${bold ? 'bold ' : ''}${size / ARIAL_CELL_HEIGHT}px Arial, sans-serif`;
+}
+
 /** Arial Bold 24, gold (`GuiMediumTextProfile`). */
-export const MEDIUM_TEXT = { font: 'bold 24px Arial, sans-serif', color: 'rgb(255, 215, 0)' };
+export const MEDIUM_TEXT = { font: arialFont(24, true), color: 'rgb(255, 215, 0)' };
 /** Arial Bold 18, white (`GuiSafariMediumTextProfile`). */
-export const SAFARI_MEDIUM_TEXT = { font: 'bold 18px Arial, sans-serif', color: '#fff' };
+export const SAFARI_MEDIUM_TEXT = { font: arialFont(18, true), color: '#fff' };
 
 /** Arial Bold 24, red (`GuiMediumRedTextProfile`). */
-export const MEDIUM_RED_TEXT = { font: 'bold 24px Arial, sans-serif', color: 'rgb(215, 14, 48)' };
+export const MEDIUM_RED_TEXT = { font: arialFont(24, true), color: 'rgb(215, 14, 48)' };
 /** Arial Bold 16, orange (`GuiAboutTextProfile` with its inline font). */
-export const ABOUT_TEXT = { font: 'bold 16px Arial, sans-serif', color: 'rgb(255, 162, 0)' };
+export const ABOUT_TEXT = { font: arialFont(16, true), color: 'rgb(255, 162, 0)' };
 /** Arial Bold 24, white (`GuiSafariTextArrayProfile`). */
-export const SAFARI_ARRAY_TEXT = { font: 'bold 24px Arial, sans-serif', color: '#fff' };
+export const SAFARI_ARRAY_TEXT = { font: arialFont(24, true), color: '#fff' };
 /** A 1 px black drop shadow (`<shadowcolor:000000><shadow:1:1>`). */
 export const SHADOW = '1px 1px 0 #000';
 
@@ -153,7 +164,7 @@ export function safariSlider(
     Object.assign(label.style, {
         position: 'absolute',
         top: pct(SLIDER.thumbH - 2, height),
-        font: '12px Arial, sans-serif',
+        font: arialFont(12),
         color: '#fff',
         transform: 'translateX(-50%)',
         whiteSpace: 'nowrap',

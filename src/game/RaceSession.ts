@@ -20,7 +20,7 @@ import { TICK_SECONDS, type VehicleMove } from '../vehicle/WheeledVehicle';
 import { Combat, type Triggers } from '../weapons/Combat';
 import { VEHICLE_EXPLOSION, VEHICLE_WATER_EXPLOSION } from '../weapons/Explosions';
 import type { Track } from '../world/Track';
-import { Car } from './Car';
+import { Car, type DamageCause } from './Car';
 import { Hazards } from './Hazards';
 import { Pickups } from './Pickups';
 import { Race, type RaceEvents, type Racer } from './Race';
@@ -176,6 +176,9 @@ export class RaceSession implements IUpdatable {
     /** When set, the race leaves the camera alone (for a debug fly camera). */
     freeCamera = false;
 
+    /** Called when a wreck counts for the score, with what caused it (`GameConnection::onDeath`). */
+    onScoredWreck: ((car: Car, cause: DamageCause) => void) | null = null;
+
     /** Whether the player picked the first person view. */
     get firstPerson(): boolean {
         return this._input.firstPerson;
@@ -276,6 +279,7 @@ export class RaceSession implements IUpdatable {
         if (cause && cause.kind !== 'zone' && this.playerRacer.finishTime === null) {
             car.score--;
             if (cause.source && cause.source !== car) cause.source.score++;
+            this.onScoredWreck?.(car, cause);
         }
         car.wreckCause = null;
         car.rockets = 0;
@@ -290,9 +294,6 @@ export class RaceSession implements IUpdatable {
     }
 
     /**
-     * Removes the input listeners and stops the sounds.
-     */
-    /**
      * Puts a hopelessly stuck car back at its last checkpoint after a few seconds. Unlike a wreck,
      * it stays visible and keeps its ammo (native `onDestroy` for AI only arms a timer).
      */
@@ -301,6 +302,16 @@ export class RaceSession implements IUpdatable {
         car.respawnTimer = RESPAWN_SECONDS;
     }
 
+    /**
+     * Returns the name `car` races under.
+     */
+    nameOf(car: Car): string {
+        return this.race.racers.find((r) => r.vehicle === car.vehicle)?.name ?? '';
+    }
+
+    /**
+     * Removes the input listeners and stops the sounds.
+     */
     dispose(): void {
         const obstacles = this.track.collision.obstacles;
         for (const car of this.cars) obstacles.splice(obstacles.indexOf(car.obstacle), 1);

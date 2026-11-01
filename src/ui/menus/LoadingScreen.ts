@@ -1,7 +1,7 @@
 import type { RaceEvent } from '../../ai/BotRoster';
 import type { CarEntry } from '../../game/CarCatalog';
 import { TRACK_NAMES } from '../../game/Tracks';
-import { MEDIUM_RED_TEXT, SHADOW } from '../GuiControls';
+import { arialFont, MEDIUM_RED_TEXT, SHADOW } from '../GuiControls';
 import { MenuScreen, rel } from './MenuScreen';
 
 const EVENT_LOOK: Record<RaceEvent, { picture: string; name: string }> = {
@@ -29,7 +29,7 @@ export class LoadingScreen extends MenuScreen {
             position: 'absolute',
             inset: '0',
             color: '#fff',
-            font: '14px Arial, sans-serif',
+            font: arialFont(14),
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',

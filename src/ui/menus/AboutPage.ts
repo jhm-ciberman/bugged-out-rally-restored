@@ -1,3 +1,4 @@
+import { arialFont } from '../GuiControls';
 import { MenuScreen, rel640 } from './MenuScreen';
 
 const ORANGE = 'rgb(255, 162, 0)';
@@ -11,7 +12,7 @@ export class AboutPage extends MenuScreen {
         super('aboutpage.jpg');
         const html = (rect: ReturnType<typeof rel640>, content: string) => {
             // `<lmargin%:5><rmargin%:95>`: the text runs from 5% to 95% of the control's width.
-            const el = this.marginText('', { font: '16px Arial, sans-serif', color: ORANGE }, rect, 5, 95);
+            const el = this.marginText('', { font: arialFont(16), color: ORANGE }, rect, 5, 95);
             el.innerHTML = content;
         };
         const b = (text: string, size = 16) => `<b style="font-size:${size}px">${text}</b>`;

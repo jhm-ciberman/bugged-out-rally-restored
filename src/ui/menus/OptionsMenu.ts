@@ -1,6 +1,6 @@
 import { assetUrl } from '../../assets/AssetPaths';
 import { getSettings, type Settings, updateSettings } from '../../game/Settings';
-import { safariSlider, styleTorqueCheckbox } from '../GuiControls';
+import { arialFont, safariSlider, styleTorqueCheckbox } from '../GuiControls';
 import { MenuScreen, rel } from './MenuScreen';
 
 /** `GuiSafariPopUpMenuProfile`: orange fill and white text, drawn like the original menu box. */
@@ -12,7 +12,7 @@ const POPUP_STYLE: Partial<CSSStyleDeclaration> = {
     borderStyle: 'solid',
     borderWidth: '1px',
     borderColor: '#fff #000 #000 #fff',
-    font: '20px Arial, sans-serif',
+    font: arialFont(20),
     textAlign: 'center',
     textAlignLast: 'center',
     cursor: 'pointer',
@@ -39,7 +39,7 @@ export class OptionsMenu extends MenuScreen {
         slider(rel(464, 164, 240, 45), 0, s.soundVolume, (v) => changed({ soundVolume: v }));
         slider(rel(464, 100, 236, 50), 0, s.musicVolume, (v) => changed({ musicVolume: v }));
         slider(rel(460, 409, 234, 50), 0.2, s.mouseSensitivity, (v) => changed({ mouseSensitivity: v }));
-        const off = { font: 'bold 16px Arial, sans-serif', color: '#fff' };
+        const off = { font: arialFont(16, true), color: '#fff' };
         this.text('off', off, rel(443, 101, 16, 20));
         this.text('off', off, rel(443, 164, 16, 20));
 
