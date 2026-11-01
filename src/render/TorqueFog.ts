@@ -80,3 +80,29 @@ export function useTorqueFog<T extends THREE.Material>(material: T): T {
     material.needsUpdate = true;
     return material;
 }
+
+/**
+ * Returns how much fog covers `point` seen from `eye`, 0 to 1, as the shaders compute it.
+ */
+export function torqueFogAmountAt(eye: THREE.Vector3, point: THREE.Vector3): number {
+    const u = torqueFogUniforms;
+    const d = eye.distanceTo(point);
+    const [near, far] = [u.torqueFogRange.value.x, u.torqueFogRange.value.y];
+    let haze = 0;
+    if (d > far) {
+        haze = 1;
+    } else if (d > near) {
+        const s = (d - near) / (far - near);
+        haze = 2 * s - s * s;
+    }
+    const volume = u.torqueFogVolume.value;
+    if (volume.x > 0) {
+        const lo = Math.min(eye.z, point.z);
+        const hi = Math.max(eye.z, point.z);
+        const overlap = Math.max(0, Math.min(hi, volume.z) - Math.max(lo, volume.y));
+        const dz = hi - lo;
+        const inside = dz > 0.001 ? (d * overlap) / dz : lo >= volume.y && lo <= volume.z ? d : 0;
+        haze += inside / volume.x;
+    }
+    return THREE.MathUtils.clamp(haze, 0, 1) * u.torqueFogEnabled.value;
+}

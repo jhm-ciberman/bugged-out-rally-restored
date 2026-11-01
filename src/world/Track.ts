@@ -49,6 +49,10 @@ export class Track implements IUpdatable {
         private readonly _threads: ReadonlyMap<MissionObject, ShapeThread>,
         private readonly _flares: readonly SunFlare[],
         private readonly _camera: THREE.Camera,
+        /** Direction from the ground toward the sun, normalized. */
+        readonly toSun: THREE.Vector3,
+        /** The placed interiors (`InteriorInstance`), which receive the cars' shadows. */
+        readonly interiors: readonly THREE.Object3D[],
     ) {}
 
     /**
@@ -117,6 +121,7 @@ export class Track implements IUpdatable {
         // Static shapes collide through their collision mesh only (interiors use their visible surfaces).
         const shapeSolids = await Promise.all(objects.map((o) => placeCollision(o, models)));
         // Interiors and TSStatic shapes shade the terrain; StaticShape is not a shadow caster in the engine.
+        const interiors = [...solids];
         const casters = [...solids];
         for (const [i, solid] of shapeSolids.entries()) {
             if (!solid) continue;
@@ -166,6 +171,8 @@ export class Track implements IUpdatable {
             threads,
             flares,
             camera,
+            toSun,
+            interiors,
         );
     }
 

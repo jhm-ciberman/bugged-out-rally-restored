@@ -8,6 +8,7 @@ import { RaceSession } from './game/RaceSession';
 import { renderPixelRatio, textureAnisotropy } from './game/Settings';
 import type { IUpdatable } from './IUpdatable';
 import { DEFAULT_FOV } from './input/VehicleInput';
+import { CarShadows } from './render/CarShadows';
 import { parseVector } from './torque/TorqueMath';
 import type { FinishChoice } from './ui/FinishScreen';
 import { RaceHud } from './ui/RaceHud';
@@ -65,6 +66,7 @@ export class Game {
     private _track: Track | null = null;
     private _session: RaceSession | null = null;
     private _hud: RaceHud | null = null;
+    private _shadows: CarShadows | null = null;
     private _fly: FlyCamera | null = null;
     /** Horizontal field of view the camera shows, in degrees (Torque measures it across). */
     private _fov = DEFAULT_FOV;
@@ -145,6 +147,8 @@ export class Game {
         this._hud = hud;
         this._session = session;
         for (const car of session.cars) this._scene.add(car.view.object);
+        this._shadows = new CarShadows(track, session.cars);
+        this._scene.add(this._shadows.object);
         this._scene.add(session.combat.object);
         this._entities.push(session, hud);
         const music = track.find('MissionGroup')?.fields.get('musictrack');
@@ -210,6 +214,8 @@ export class Game {
     endRace(): void {
         this._session?.dispose();
         this._hud?.dispose();
+        this._shadows?.dispose();
+        this._shadows = null;
         this._fly?.dispose();
         this._session = null;
         this._hud = null;
@@ -262,6 +268,7 @@ export class Game {
         if (!this._track) return;
         for (const entity of this._entities) entity.update(dt);
         this._setFov(this._session?.cameraFov ?? DEFAULT_FOV);
+        this._shadows?.update(this._renderer, this._camera);
         this._renderer.render(this._scene, this._camera);
         this._hud?.render(this._renderer, this._camera);
     };
