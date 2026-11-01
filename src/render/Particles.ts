@@ -410,3 +410,20 @@ export const EXPLOSION_WATER_SPARK: ParticleLook = {
     dragCoefficient: 0,
     useInvAlpha: true,
 };
+
+/** Bubbles behind a Zinger flying under water (`RocketBubbleParticle`). */
+export const ROCKET_BUBBLE: ParticleLook = {
+    texture: '~/data/shapes/particles/bubble',
+    lifetime: 1.5,
+    lifetimeVariance: 0.6,
+    colors: [
+        [0.7, 0.8, 1, 0.4],
+        [0.7, 0.8, 1, 1],
+        [0.7, 0.8, 1, 0],
+    ],
+    sizes: [0.2, 0.2, 0.2],
+    times: [0, 0.5, 1],
+    gravityCoefficient: -0.25,
+    dragCoefficient: 0,
+    useInvAlpha: false,
+};

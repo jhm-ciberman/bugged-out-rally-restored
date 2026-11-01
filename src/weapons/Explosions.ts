@@ -81,6 +81,9 @@ export const VEHICLE_WATER_EXPLOSION: ExplosionData = {
     shake: { amplitude: 3, frequency: new THREE.Vector3(8, 9, 7), seconds: 1.3, radius: 20 },
 };
 
+/** A Zinger or Magno bomb going off under water (`RocketWaterExplosion`): the same as a car's. */
+export const ROCKET_WATER_EXPLOSION: ExplosionData = VEHICLE_WATER_EXPLOSION;
+
 /** Frog spit splatting (`SpitExplosion`): a ball of green blobs. */
 export const SPIT_EXPLOSION: ExplosionData = {
     bursts: [{ look: SPIT_SPLAT, count: 200, speed: 0.8, speedVariance: 0.5, radius: 4 }],

@@ -3,7 +3,7 @@ import type { ModelLibrary } from '../assets/ModelLibrary';
 import type { AudioSystem } from '../audio/AudioSystem';
 import type { Car } from '../game/Car';
 import type { CollisionWorld } from '../physics/CollisionWorld';
-import { Particles, ROCKET_EXHAUST } from '../render/Particles';
+import { Particles, ROCKET_BUBBLE, ROCKET_EXHAUST } from '../render/Particles';
 import type { ExplosionData, ExplosionShake } from './Explosions';
 import { BOMB, Projectile, type ProjectileData, ROCKET } from './Projectile';
 import { WeaponImage } from './WeaponImage';
@@ -14,6 +14,8 @@ const ROCKET_LIFT = 5;
 const BOMB_DROP_HEIGHT = 2;
 /** Seconds between exhaust puffs behind a Zinger (`RocketExhaustParticleEmitter.ejectionPeriodMS`). */
 const EXHAUST_PERIOD = 0.005;
+/** Seconds between bubbles behind a Zinger under water (`RocketBubbleEmitter.ejectionPeriodMS`). */
+const BUBBLE_PERIOD = 0.009;
 /** Speed of a new exhaust puff (`ejectionVelocity`). */
 const EXHAUST_SPEED = 0.1;
 /** Glow of a flying projectile (`hasLight`, `lightRadius`, `lightColor`). */
@@ -138,7 +140,7 @@ export class Combat {
             const hit = f.projectile.tick(this._world, cars);
             if (f.projectile.data === ROCKET) this._exhaust(f.previous, f.projectile.position, dt);
             if (hit) {
-                this.explode(f.projectile.data.explosion, hit.point);
+                this._detonate(f.projectile, hit.point);
                 if (hit.car)
                     this.onDamage?.({
                         target: hit.car,
@@ -148,7 +150,7 @@ export class Combat {
                 this._remove(i);
             } else if (f.projectile.expired) {
                 // Magnetic bombs blow up when their time runs out; the others just vanish.
-                if (f.projectile.data.magnetic) this.explode(f.projectile.data.explosion, f.projectile.position);
+                if (f.projectile.data.magnetic) this._detonate(f.projectile, f.projectile.position);
                 this._remove(i);
             }
         }
@@ -255,18 +257,37 @@ export class Combat {
     }
 
     /**
-     * Leaves a puff every 5 ms along the path flown this tick.
+     * Plays the projectile's explosion, or its water explosion when it goes off under water (`Projectile::explode`).
+     */
+    private _detonate(projectile: Projectile, point: THREE.Vector3): void {
+        const { explosion, waterExplosion } = projectile.data;
+        this.explode(waterExplosion && this._world.isInWater(point) ? waterExplosion : explosion, point);
+    }
+
+    /**
+     * Leaves the trail along the path flown this tick: smoke every 5 ms in the air, bubbles every 9 ms
+     * under water (`particleEmitter`, `particleWaterEmitter`).
      */
     private _exhaust(from: THREE.Vector3, to: THREE.Vector3, dt: number): void {
-        const count = Math.round(dt / EXHAUST_PERIOD);
+        const underwater = this._world.isInWater(to);
+        const count = Math.round(dt / (underwater ? BUBBLE_PERIOD : EXHAUST_PERIOD));
         const p = new THREE.Vector3();
         const v = new THREE.Vector3();
         for (let i = 0; i < count; i++) {
             p.lerpVectors(from, to, (i + 1) / count);
-            v.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).setLength(
-                EXHAUST_SPEED * Math.random() * 2,
-            );
-            this.particles.emit(ROCKET_EXHAUST, p, v);
+            if (underwater) {
+                // 1 m/s, give or take 0.5, in a cone up to 80 degrees from straight up.
+                const tilt = THREE.MathUtils.degToRad(80) * Math.random();
+                const turn = Math.random() * Math.PI * 2;
+                v.set(Math.sin(tilt) * Math.cos(turn), Math.sin(tilt) * Math.sin(turn), Math.cos(tilt));
+                v.multiplyScalar(1 + (Math.random() * 2 - 1) * 0.5);
+                this.particles.emit(ROCKET_BUBBLE, p, v);
+            } else {
+                v.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).setLength(
+                    EXHAUST_SPEED * Math.random() * 2,
+                );
+                this.particles.emit(ROCKET_EXHAUST, p, v);
+            }
         }
     }
 
