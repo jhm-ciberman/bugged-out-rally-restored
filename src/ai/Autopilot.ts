@@ -3,23 +3,32 @@ import type { VehicleMove, WheeledVehicle } from '../vehicle/WheeledVehicle';
 
 /** Half-size of the square (world X and Y) in which a destination counts as reached (native default). */
 const ARRIVE_TOLERANCE = 12;
-/** A car that stays within this distance of where it was counts as stuck. */
-const STUCK_RADIUS = 2.5;
+/** A tick in which the car moves less than this counts toward being stuck (`getMoveList`, 0x4c9cfc). */
+const STUCK_STEP = 2.5;
 /** Stuck ticks before backing up with the steering reversed. */
 const STUCK_REVERSE_TICKS = 50;
 /** Stuck ticks before giving up and respawning at the last checkpoint. */
 const STUCK_RESPAWN_TICKS = 300;
-/** Throttle on straights, and in sharp turns. Bot moves are not clamped to 1 (`Move::clamp` is for the network). */
+/** The steering correction is scaled this much, and negated, while backing up. */
+const REVERSE_STEER_SCALE = -10;
+/** Throttle on straights, and in sharp turns; the move takes the smaller of this and the target throttle. */
 const BASE_THROTTLE = 1.1;
 const TURN_THROTTLE = 0.6;
-/** Heading alignment (cosine) below which a turn counts as sharp. */
+/** Target throttle, and the one in a slow zone above the coasting speed. */
+const TARGET_THROTTLE = 1;
+/** Alignment of the car's forward axis with the way to the destination below which a turn counts as sharp. */
 const SHARP_TURN_ALIGNMENT = 0.2;
-/** Speeds of the native speed governor. The unit is not known; km/h fits the numbers best. */
+/** Speeds of the speed governor, in m/s. */
 const TURN_BRAKE_SPEED = 40;
 const SLOW_ZONE_COAST_SPEED = 100;
 const SLOW_ZONE_BRAKE_SPEED = 140;
+/** Push toward the destination given every tick, in N s: 0.1 m/s more per tick for a 200 kg car. */
+const PUSH_IMPULSE = 20;
 
 const _local = new THREE.Vector3();
+const _way = new THREE.Vector3();
+const _forward = new THREE.Vector3();
+const _arm = new THREE.Vector3();
 const _toGoal = new THREE.Vector3();
 const _inv = new THREE.Quaternion();
 
@@ -37,8 +46,9 @@ export class Autopilot {
     /** Called when the car has been stuck too long and should respawn. */
     onGiveUp: (() => void) | null = null;
 
-    /** Where the car was when it last moved freely; stuck means staying near it. */
-    private readonly _stuckOrigin = new THREE.Vector3();
+    /** Where the car was on the previous tick. */
+    private readonly _lastPosition = new THREE.Vector3();
+    private _stuck = false;
     private _stuckTicks = 0;
     /** Direction from where the car was to the destination when it was set (for the "passed it" test). */
     private readonly _segment = new THREE.Vector3();
@@ -56,7 +66,8 @@ export class Autopilot {
      */
     reset(): void {
         this._stuckTicks = 0;
-        this._stuckOrigin.copy(this._vehicle.rigid.linPosition);
+        this._stuck = false;
+        this._lastPosition.copy(this._vehicle.rigid.linPosition);
     }
 
     /**
@@ -86,39 +97,47 @@ export class Autopilot {
         const angle = Math.atan2(_local.x, _local.y);
         const max = v.data.maxSteeringAngle;
         const wanted = Math.sign(angle) * Math.min(Math.sqrt(Math.abs(angle)), max);
-        const speed = v.speed * 3.6;
+        const speed = v.speed;
+        _way.copy(_toGoal).normalize();
+        const alignment = _way.dot(_forward.set(0, 1, 0).applyQuaternion(rigid.angPosition));
 
-        const alignment = Math.cos(angle);
-        let throttle = BASE_THROTTLE;
-        if (alignment < SHARP_TURN_ALIGNMENT) {
-            throttle = TURN_THROTTLE;
-            if (speed > TURN_BRAKE_SPEED) move.brake = true;
+        // Stuck (`getMoveList`): every tick that moves less than 2.5 m counts. Past 50 the bot backs up with
+        // the steering reversed until a tick moves it farther, and past 300 it gives up.
+        if (rigid.linPosition.distanceTo(this._lastPosition) < STUCK_STEP) {
+            this._stuck = true;
+        } else {
+            this._stuck = false;
+            this._stuckTicks = 0;
         }
+        if (this._stuck) this._stuckTicks++;
+        move.yaw = wanted - v.steering;
+        if (this._stuckTicks > STUCK_REVERSE_TICKS) {
+            move.throttle = -1;
+            move.yaw *= REVERSE_STEER_SCALE;
+            if (this._stuckTicks > STUCK_RESPAWN_TICKS) {
+                this._stuckTicks = 0;
+                this.onGiveUp?.();
+            }
+            return move;
+        }
+
+        // The bots' edge: a push straight at the destination every tick, on top of the engine.
+        if (alignment !== 0) {
+            rigid.applyImpulse(rigid.getOriginVector(rigid.linPosition, _arm), _way.multiplyScalar(PUSH_IMPULSE));
+        }
+
+        let base = BASE_THROTTLE;
+        let target = TARGET_THROTTLE;
         if (this.slow) {
             if (speed > SLOW_ZONE_BRAKE_SPEED) move.brake = true;
-            else if (speed > SLOW_ZONE_COAST_SPEED) throttle = 0;
-            else throttle = Math.min(throttle, 1);
+            else if (speed > SLOW_ZONE_COAST_SPEED) target = 0;
         }
-        move.throttle = throttle;
-        move.yaw = wanted - v.steering;
-
-        // Stuck (native AI tick, 0x4c9c96): a car that stays within 2.5 m of where it was keeps counting.
-        // Past 50 ticks it backs up with the wheels turned the other way until it gets 2.5 m away;
-        // past 300 it gives up. Moving away resets the count.
-        if (this._stuckOrigin.distanceTo(rigid.linPosition) >= STUCK_RADIUS) {
-            this._stuckOrigin.copy(rigid.linPosition);
-            this._stuckTicks = 0;
-        } else {
-            this._stuckTicks++;
+        if (alignment < SHARP_TURN_ALIGNMENT) {
+            base = TURN_THROTTLE;
+            if (speed > TURN_BRAKE_SPEED) move.brake = true;
         }
-        if (this._stuckTicks > STUCK_RESPAWN_TICKS) {
-            this._stuckTicks = 0;
-            this.onGiveUp?.();
-        } else if (this._stuckTicks > STUCK_REVERSE_TICKS) {
-            move.throttle = -1;
-            move.brake = false;
-            move.yaw = -Math.sign(wanted || 1) * max - v.steering;
-        }
+        move.throttle = Math.min(base, target);
+        this._lastPosition.copy(rigid.linPosition);
         return move;
     }
 }
