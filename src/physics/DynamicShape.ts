@@ -26,6 +26,11 @@ export interface DynamicShapeData {
     readonly radius: number;
     /** Lifetime in 32 ms ticks (`lifetime = 300`; the unit is not certain). */
     readonly lifetimeTicks: number;
+    /** Speed changes from a hit, in m/s, that play the soft and the hard impact sound. */
+    readonly softImpactSpeed: number;
+    readonly hardImpactSpeed: number;
+    readonly softImpactSound: string;
+    readonly hardImpactSound: string;
 }
 
 /** A rolling boulder (`BoulderData`). */
@@ -35,6 +40,10 @@ export const BOULDER: DynamicShapeData = {
     restitution: 1,
     radius: 2.5,
     lifetimeTicks: 300,
+    softImpactSpeed: 7,
+    hardImpactSpeed: 12,
+    softImpactSound: 'BoulderLowImpactSound',
+    hardImpactSound: 'BoulderHighImpactSound',
 };
 
 /** A rolling snowball (`SnowballData`). */
@@ -48,6 +57,8 @@ export class DynamicShape {
     readonly rigid = new Rigid();
     readonly obstacle: SphereObstacle;
     age = 0;
+    /** Called with the change of speed, in m/s, after a tick where the shape hit something. */
+    onImpact: ((speed: number) => void) | null = null;
     private readonly _hull: THREE.Vector3[];
     private readonly _hullWorld: THREE.Vector3[];
     private readonly _contacts: Contact[] = [];
@@ -100,7 +111,8 @@ export class DynamicShape {
         }
         this._contacts.length = 0;
         this._world.findContacts(this._hullWorld, r.worldCenterOfMass, COLLISION_TOL, this._contacts, this);
-        resolveCollisions(r, this._contacts, COLLISION_TOL);
+        const before = r.linVelocity.clone();
+        if (resolveCollisions(r, this._contacts, COLLISION_TOL)) this.onImpact?.(r.linVelocity.distanceTo(before));
         resolveContacts(r, this._contacts, COLLISION_TOL, CONTACT_TOL, dt);
         r.integrate(dt);
         this.obstacle.center.copy(r.linPosition);

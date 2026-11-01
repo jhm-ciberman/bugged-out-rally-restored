@@ -93,7 +93,7 @@ export class Hazards {
             const shooters = entry[0].map(frog).filter((f): f is MissionObject => f !== undefined);
             this._rollZones.push({ trigger: new TriggerVolume(o), shooters, ball: entry[1], timer: null });
         }
-        _audio?.preload('SpitFireSound');
+        for (const p of ['SpitFireSound', BOULDER.softImpactSound, BOULDER.hardImpactSound]) _audio?.preload(p);
     }
 
     /**
@@ -185,6 +185,17 @@ export class Hazards {
         const position = parseVector(shooter.fields.get('position'));
         const forward = new THREE.Vector3(0, 1, 0).applyQuaternion(parseRotation(shooter.fields.get('rotation')));
         const shape = new DynamicShape(data, this._world, position, forward.multiplyScalar(ROLL_MOMENTUM));
+        // Client impact sounds, picked by the change of speed (`Vehicle::updatePos`).
+        shape.onImpact = (speed) => {
+            const sound =
+                speed >= data.hardImpactSpeed
+                    ? data.hardImpactSound
+                    : speed >= data.softImpactSpeed
+                      ? data.softImpactSound
+                      : null;
+            if (sound && this._audio)
+                void this._audio.play3d(sound, shape.rigid.linPosition.clone(), this._combat.object);
+        };
         this._world.obstacles.push(shape.obstacle);
         const rolling: Rolling = { shape, model: null };
         this._rolling.push(rolling);
