@@ -100,6 +100,7 @@ export class Bot {
      * Starts driving toward the first marker (`AIManager::start`).
      */
     start(): void {
+        this.autopilot.reset();
         this._path = 0;
         this._node = 0;
         this._moveToNode();
@@ -129,12 +130,17 @@ export class Bot {
     triggers(dt: number, cars: readonly Car[], items: readonly THREE.Vector3[]): { fire: boolean; drop: boolean } {
         let fire = false;
         let drop = false;
+        // The repeat timers count down before the scan, so a shot on the edge waits a full second for the next.
+        if (this._ahead) this._shotTimer -= dt;
+        if (this._behind) this._behindShotTimer -= dt;
         this._scanTimer -= dt;
         if (this._scanTimer <= 0) {
             this._scanTimer += SCAN_SECONDS;
             const rigid = this.car.vehicle.rigid;
             _forward.set(0, 1, 0).applyQuaternion(rigid.angPosition);
-            const targets = cars.filter((c) => c !== this.car && c.respawnTimer <= 0).map((c) => c.renderPosition);
+            const targets = cars
+                .filter((c) => c !== this.car && c.respawnTimer <= 0)
+                .map((c) => c.vehicle.rigid.linPosition);
             const seen = scanTargets(rigid.linPosition, _forward, targets);
             // An item in view pulls the steering toward it for one tick.
             const item = scanItems(rigid.linPosition, _forward, items);
@@ -152,14 +158,12 @@ export class Bot {
             this._behind = seen.behind;
         }
         if (this._ahead) {
-            this._shotTimer -= dt;
             if (this._shotTimer <= 0 && !fire) {
                 fire = true;
                 this._shotTimer += SHOT_SECONDS;
             }
         }
         if (this._behind) {
-            this._behindShotTimer -= dt;
             if (this._behindShotTimer <= 0 && !drop) {
                 drop = true;
                 this._behindShotTimer += SHOT_SECONDS;
