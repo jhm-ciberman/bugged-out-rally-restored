@@ -1,4 +1,4 @@
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import { parseVector } from '../torque/TorqueMath';
 import type { WheeledVehicle } from '../vehicle/WheeledVehicle';
 import type { Track } from '../world/Track';
@@ -10,10 +10,11 @@ export const RACE_LAPS = 3;
 const REPORT_SECONDS = 0.1;
 /** Reports in a row going the wrong way before the warning (`getWrongWayCnt > 30`). */
 const WRONG_WAY_REPORTS = 30;
-/** Distance change, in meters, that counts as moving toward or away from the checkpoint. */
-const WRONG_WAY_MARGIN = 0.05;
 /** Delay before the countdown starts, in seconds (`$Game::WaitTime`). */
 const WAIT_SECONDS = 2;
+
+const _toTarget = new THREE.Vector3();
+const _move = new THREE.Vector3();
 
 /**
  * Where the race is in its flow (`server/scripts/game.cs`).
@@ -40,10 +41,13 @@ export interface Racer {
     readonly lastCheckpoint: { position: THREE.Vector3; rotation: THREE.Quaternion };
     /** Called when the racer crosses its next checkpoint in order. */
     onCheckpoint: (() => void) | null;
-    /** 100 ms steps in a row spent moving away from the next checkpoint. */
+    /** Position reports in a row spent moving away from the next checkpoint while losing ground. */
     wrongWay: number;
-    /** Distance to the next checkpoint at the last position report. */
-    lastDistance: number;
+    /** Where the car was at the last position report, and at the one before. */
+    readonly reportedPosition: THREE.Vector3;
+    readonly previousPosition: THREE.Vector3;
+    /** Meters of the race covered, as of the last report (see {@link Race.standings}). */
+    progress: number;
     /** Triggers the car is inside, to raise enter events once. */
     readonly inside: Set<TriggerVolume>;
 }
@@ -74,6 +78,7 @@ export class Race {
     private _phaseTime = 0;
     private _reportTime = 0;
     private _count = 3;
+    private _legLengths: number[] | null = null;
 
     constructor(
         track: Track,
@@ -101,16 +106,14 @@ export class Race {
 
     /**
      * Returns the racer's place, starting at 1.
-     *
-     * The original ranking lives in native code (`GuiRaceTextListCtrl`). This orders by finish time,
-     * then laps, then checkpoints passed, then distance to the next checkpoint.
      */
     positionOf(racer: Racer): number {
         return this.standings().indexOf(racer) + 1;
     }
 
     /**
-     * Returns the racers from first to last place.
+     * Returns the racers from first to last place: finishers by finish time, then the others by progress
+     * (`getRacePosition`), with ties broken by checkpoints passed and distance to the next one.
      */
     standings(): Racer[] {
         const progress = (r: Racer) => r.lap * 100 + (r.nextCheck - 1);
@@ -124,7 +127,7 @@ export class Race {
                 if (b.finishTime === null) return -1;
                 return a.finishTime - b.finishTime;
             }
-            return progress(b) - progress(a) || distance(a) - distance(b);
+            return b.progress - a.progress || progress(b) - progress(a) || distance(a) - distance(b);
         });
     }
 
@@ -146,7 +149,9 @@ export class Race {
             },
             onCheckpoint: null,
             wrongWay: 0,
-            lastDistance: Number.POSITIVE_INFINITY,
+            reportedPosition: vehicle.rigid.linPosition.clone(),
+            previousPosition: vehicle.rigid.linPosition.clone(),
+            progress: 0,
             inside: new Set(),
         };
         this.racers.push(racer);
@@ -187,26 +192,74 @@ export class Race {
         this._reportTime += dt;
         if (this._reportTime >= REPORT_SECONDS) {
             this._reportTime -= REPORT_SECONDS;
-            if (this.phase === 'racing') for (const racer of this.racers) this._reportPosition(racer);
+            if (this.phase === 'racing') this._report();
         }
     }
 
     /**
-     * Counts reports spent driving away from the next checkpoint and warns past 30 (about 3 s).
-     * The counting is native in the original (`getWrongWayCnt`); "farther than last time" is a guess.
+     * Records where each racer is, re-scores everyone's progress and counts wrong-way reports, warning past 30
+     * (about 3 s). The counter only grows while the car both heads away from its next checkpoint and loses
+     * progress (`reportCurPosition` and `getRacePosition` in the exe's race list).
      */
-    private _reportPosition(racer: Racer): void {
-        if (racer.finishTime !== null) return;
-        const target = this.nextCheckpointPosition(racer);
-        if (!target) return;
-        const distance = target.distanceTo(racer.vehicle.rigid.linPosition);
-        if (distance > racer.lastDistance + WRONG_WAY_MARGIN) racer.wrongWay++;
-        else if (distance < racer.lastDistance - WRONG_WAY_MARGIN) racer.wrongWay = 0;
-        racer.lastDistance = distance;
-        if (racer.wrongWay > WRONG_WAY_REPORTS) {
-            this.events.onCenterPrint?.(racer, 'Wrong Way!');
-            racer.wrongWay = 0;
+    private _report(): void {
+        for (const racer of this.racers) {
+            if (racer.finishTime !== null) continue;
+            racer.previousPosition.copy(racer.reportedPosition);
+            racer.reportedPosition.copy(racer.vehicle.rigid.linPosition);
         }
+        for (const racer of this.racers) {
+            if (racer.finishTime !== null) continue;
+            const before = racer.progress;
+            racer.progress = this._progressOf(racer);
+            const target = this.nextCheckpointPosition(racer);
+            const heading = target
+                ? _toTarget
+                      .subVectors(target, racer.reportedPosition)
+                      .dot(_move.subVectors(racer.reportedPosition, racer.previousPosition))
+                : 0;
+            racer.wrongWay = heading < 0 && before > racer.progress ? racer.wrongWay + 1 : 0;
+            if (racer.wrongWay > WRONG_WAY_REPORTS) {
+                this.events.onCenterPrint?.(racer, 'Wrong Way!');
+                racer.wrongWay = 0;
+            }
+        }
+    }
+
+    /**
+     * Meters of the race a racer has covered: whole laps, the legs between the checkpoints already passed, and the
+     * part of the current leg done, measured as the leg's length less the distance left to its end.
+     */
+    private _progressOf(racer: Racer): number {
+        const legs = this._legs();
+        const count = legs.length;
+        const target = this.nextCheckpointPosition(racer);
+        if (count === 0 || !target) return 0;
+        const lapLength = legs.reduce((a, b) => a + b, 0);
+        let progress = racer.lap * lapLength;
+        const left = target.distanceTo(racer.reportedPosition);
+        // The last checkpoint passed: after a lap the racer heads from the last checkpoint back to the first.
+        const passed = racer.nextCheck > 1 ? racer.nextCheck - 1 : racer.lap > 0 ? count : 0;
+        if (passed === count) return progress + legs[0] - left;
+        for (let j = 0; j < passed; j++) progress += legs[j];
+        // On the other legs the exe truncates both lengths to whole meters and stops at zero.
+        return progress + Math.max(0, Math.trunc(legs[passed]) - Math.trunc(left));
+    }
+
+    /**
+     * Returns the length of each leg of a lap, by the checkpoint it ends at: the first ends at checkpoint 1,
+     * coming from the last one.
+     */
+    private _legs(): number[] {
+        if (this._legLengths) return this._legLengths;
+        const count = this.markers.size;
+        const legs: number[] = [];
+        for (let k = 1; k <= count; k++) {
+            const from = this.markers.get(k === 1 ? count : k - 1);
+            const to = this.markers.get(k);
+            legs.push(from && to ? from.distanceTo(to) : 0);
+        }
+        this._legLengths = legs;
+        return legs;
     }
 
     private _checkTriggers(racer: Racer): void {
@@ -231,9 +284,9 @@ export class Race {
             racer.lastCheckpoint.position.copy(racer.vehicle.rigid.linPosition);
             racer.lastCheckpoint.rotation.copy(racer.vehicle.rigid.angPosition);
             racer.onCheckpoint?.();
-            // The target moves to the next checkpoint, which is usually farther away.
-            racer.lastDistance = Number.POSITIVE_INFINITY;
-            racer.wrongWay = 0;
+            // Passing a checkpoint counts as a position report (`markCheckPoint`).
+            racer.previousPosition.copy(racer.reportedPosition);
+            racer.reportedPosition.copy(racer.vehicle.rigid.linPosition);
             if (trigger.field('islast') === '1') {
                 racer.lap++;
                 racer.lapTimes.push(this.time);
