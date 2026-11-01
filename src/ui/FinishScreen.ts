@@ -124,7 +124,7 @@ export class FinishScreen {
     }
 
     /**
-     * Rewrites the rows from the current standings. Bots that are still racing show their times as they finish.
+     * Rewrites the rows from the current standings. Racers still on the track show as running until they finish.
      */
     refresh(): void {
         const race = this._session.race;
@@ -133,22 +133,13 @@ export class FinishScreen {
         standings.forEach((racer, i) => {
             if (i >= 8) return;
             const car = this._session.cars.find((c) => c.vehicle === racer.vehicle);
-            const kills = car?.score ?? 0;
-            const prize = racer.finishTime !== null ? placePrize(first, i + 1) : 0;
-            setColumns(this._names[i], `${i + 1}. ${racer.name}`);
-            setColumns(
-                this._scores[i],
-                [
-                    ...lapSplits(racer),
-                    racer.finishTime !== null ? formatRaceTime(racer.finishTime) : '--',
-                    `$${prize}`,
-                    kills < 0 ? `-$${-kills * KILL_VALUE}` : `$${kills * KILL_VALUE}`,
-                ].join('\t'),
-            );
+            const tag = racer === this._session.playerRacer ? PLAYER_TAG : BOT_TAG;
+            setTorqueText(this._names[i], `${i + 1}. ${racer.name.padEnd(NAME_WIDTH)}${tag}`);
+            setTorqueText(this._scores[i], scoreLine(racer, i, first, car?.score ?? 0));
         });
         for (let i = standings.length; i < 8; i++) {
-            setColumns(this._names[i], '');
-            setColumns(this._scores[i], '');
+            setTorqueText(this._names[i], '');
+            setTorqueText(this._scores[i], '');
         }
     }
 
@@ -182,8 +173,8 @@ export class FinishScreen {
 
     private _text(text: string, profile: { font: string; color: string }): HTMLElement {
         const t = document.createElement('div');
-        Object.assign(t.style, { ...profile, whiteSpace: 'pre', lineHeight: '22px', display: 'flex' });
-        setColumns(t, text);
+        Object.assign(t.style, { ...profile, whiteSpace: 'pre', lineHeight: '22px' });
+        setTorqueText(t, text);
         return t;
     }
 
@@ -193,33 +184,47 @@ export class FinishScreen {
     };
 }
 
+/** Characters the scoreboard pads a racer's name to, before the tag. */
+const NAME_WIDTH = 12;
+/** Tags after the names: the player hosts the game, so it shows as an admin. */
+const PLAYER_TAG = '*';
+const BOT_TAG = '[Bot]';
+
 /**
- * Returns each lap's own time, `--` for laps not driven yet.
+ * Returns a racer's scoreboard line in `place` (0 = first), tab separated (`FinishgameGui::updateScoreBoard`).
+ */
+function scoreLine(racer: Racer, place: number, first: number, kills: number): string {
+    if (racer.finishTime === null) return 'running';
+    const prize = placePrize(first, place + 1);
+    // The trailing spaces after some prizes are in the original and push the kills column right.
+    let prizeText = `$${prize}`;
+    if (place === 2 && prize < 1000) prizeText += ' ';
+    else if (place > 2) prizeText += '      ';
+    const killText = kills < 0 ? `-$${-kills * KILL_VALUE}` : `$${kills * KILL_VALUE}`;
+    return [...lapSplits(racer), formatRaceTime(racer.finishTime), prizeText, killText].join('\t');
+}
+
+/**
+ * Returns each lap's own time.
  */
 function lapSplits(racer: Racer): string[] {
     const out: string[] = [];
     let previous = 0;
     for (let i = 0; i < 3; i++) {
-        const end = racer.lapTimes[i];
-        out.push(end === undefined ? '--' : formatRaceTime(end - previous));
-        if (end !== undefined) previous = end;
+        const end = racer.lapTimes[i] ?? previous;
+        // Rounded to whole milliseconds, so that float error cannot drop a tenth (6.1 - 5.4 is 0.69999...).
+        out.push(formatRaceTime(Math.round((end - previous) * 1000) / 1000));
+        previous = end;
     }
     return out;
 }
 
-/** Width of one scoreboard column, in pixels: wide enough for a race time, and six fit inside the panel. */
-const COLUMN_WIDTH = 80;
+/** Torque draws a tab as a gap of this many spaces, not as a jump to a column (`GFont::TabWidthInSpaces`). */
+const TAB_WIDTH_IN_SPACES = 3;
 
 /**
- * Shows tab-separated `text` as fixed-width columns, so the rows line up under the header.
+ * Shows `text` the way a Torque text control draws it.
  */
-function setColumns(row: HTMLElement, text: string): void {
-    row.replaceChildren(
-        ...text.split('	').map((cell) => {
-            const span = document.createElement('span');
-            span.textContent = cell.trim();
-            span.style.flex = `0 0 ${COLUMN_WIDTH}px`;
-            return span;
-        }),
-    );
+function setTorqueText(element: HTMLElement, text: string): void {
+    element.textContent = text.split('\t').join(' '.repeat(TAB_WIDTH_IN_SPACES));
 }
