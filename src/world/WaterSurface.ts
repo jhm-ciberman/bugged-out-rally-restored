@@ -129,6 +129,7 @@ export interface WaterPasses {
 export class WaterSurface {
     readonly object: THREE.Mesh;
     private readonly _time = { value: 0 };
+    private _coverScale = 1;
 
     constructor(settings: WaterSettings) {
         // A square around the camera, moved in whole cells so the waves stay put; the shader keeps only
@@ -311,11 +312,20 @@ export class WaterSurface {
      */
     update(deltaSeconds: number, camera: THREE.Camera): void {
         this._time.value += deltaSeconds;
+        const step = CELL * this._coverScale;
         this.object.position.set(
-            Math.round(camera.position.x / CELL) * CELL,
-            Math.round(camera.position.y / CELL) * CELL,
+            Math.round(camera.position.x / step) * step,
+            Math.round(camera.position.y / step) * step,
             0,
         );
+    }
+
+    /**
+     * Stretches the surface to cover `scale` times the visible distance. The wave grid gets coarser with it.
+     */
+    setCoverScale(scale: number): void {
+        this._coverScale = scale;
+        this.object.scale.set(scale, scale, 1);
     }
 }
 

@@ -187,6 +187,17 @@ export class Track implements IUpdatable {
     }
 
     /**
+     * Draws the world `scale` times as far as the mission sets: the fog moves out and the water covers more.
+     */
+    setViewDistanceScale(scale: number): void {
+        applyFog(
+            this.objects.find((o) => o.className === 'Sky'),
+            scale,
+        );
+        this._water?.setCoverScale(scale);
+    }
+
+    /**
      * Returns the animation thread of a mission object's shape, or `undefined` when its shape has no sequences.
      */
     thread(obj: MissionObject): ShapeThread | undefined {
@@ -203,9 +214,9 @@ async function loadTerrain(obj: MissionObject): Promise<TerrainHeightfield> {
     return new TerrainHeightfield(parseTerrain(buffer), origin, origin, squareSize);
 }
 
-function applyFog(sky: MissionObject | undefined): void {
-    const visible = Number(sky?.fields.get('visibledistance') ?? 500);
-    const fogDistance = Number(sky?.fields.get('fogdistance') ?? 400);
+function applyFog(sky: MissionObject | undefined, scale = 1): void {
+    const visible = Number(sky?.fields.get('visibledistance') ?? 500) * scale;
+    const fogDistance = Number(sky?.fields.get('fogdistance') ?? 400) * scale;
     torqueFogUniforms.torqueFogColor.value.copy(parseColor(sky?.fields.get('fogcolor') ?? '0.8 0.8 0.8'));
     torqueFogUniforms.torqueFogRange.value.set(fogDistance, visible);
     const [volVisible, volMin, volMax] = parseNumbers(sky?.fields.get('fogvolume1'), 3);

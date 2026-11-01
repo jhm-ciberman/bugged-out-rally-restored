@@ -66,6 +66,7 @@ export class Game {
     private _fly: FlyCamera | null = null;
     /** Horizontal field of view the camera shows, in degrees (Torque measures it across). */
     private _fov = DEFAULT_FOV;
+    private _viewDistanceScale = 1;
 
     constructor(private readonly _container: HTMLElement) {
         this._camera = new THREE.PerspectiveCamera(verticalFov(this._aspect, DEFAULT_FOV), this._aspect, 0.1, 2000);
@@ -188,9 +189,26 @@ export class Game {
         this._track = track;
         this._scene.add(track.root);
         this._entities.push(track);
-        this._camera.far = track.visibleDistance + 50;
-        this._camera.updateProjectionMatrix();
+        this._applyViewDistance();
         return track;
+    }
+
+    /** Multiplier on the mission's visible distance, for debugging (1 = as the mission sets it). */
+    get viewDistanceScale(): number {
+        return this._viewDistanceScale;
+    }
+
+    set viewDistanceScale(scale: number) {
+        this._viewDistanceScale = scale;
+        this._applyViewDistance();
+    }
+
+    private _applyViewDistance(): void {
+        const track = this._track;
+        if (!track) return;
+        track.setViewDistanceScale(this._viewDistanceScale);
+        this._camera.far = track.visibleDistance * this._viewDistanceScale + 50;
+        this._camera.updateProjectionMatrix();
     }
 
     private get _aspect(): number {

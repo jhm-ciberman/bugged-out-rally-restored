@@ -26,8 +26,8 @@ const LABELS: Record<keyof DebugFlags, string> = {
 };
 
 /**
- * A small development panel with switches for parts of the scene, shown with F2 or `?debug`.
- * `?nofog` starts with the fog off.
+ * A small development panel with switches for parts of the scene and a view distance slider, shown with F2
+ * or `?debug`. `?nofog` starts with the fog off, `?view=2` with twice the view distance.
  */
 export class DebugPanel {
     private readonly _element = document.createElement('div');
@@ -40,12 +40,15 @@ export class DebugPanel {
         particles: true,
         hud: true,
     };
+    private readonly _viewLabel = document.createElement('div');
     private _frames = 0;
     private _lastFpsTime = performance.now();
 
     constructor(private readonly _game: Game) {
         const params = new URLSearchParams(window.location.search);
         if (params.has('nofog')) this._flags.fog = false;
+        const view = Number(params.get('view'));
+        if (Number.isFinite(view) && view > 0) _game.viewDistanceScale = view;
 
         Object.assign(this._element.style, {
             position: 'fixed',
@@ -78,6 +81,17 @@ export class DebugPanel {
             label.append(box, ` ${LABELS[key]}`);
             this._element.append(label);
         }
+        const slider = document.createElement('input');
+        slider.type = 'range';
+        slider.min = '0.5';
+        slider.max = '4';
+        slider.step = '0.25';
+        slider.value = String(_game.viewDistanceScale);
+        slider.style.width = '140px';
+        slider.addEventListener('input', () => {
+            _game.viewDistanceScale = Number(slider.value);
+        });
+        this._element.append(this._viewLabel, slider);
         document.body.append(this._element);
 
         window.addEventListener('keydown', (e) => {
@@ -100,6 +114,9 @@ export class DebugPanel {
         const particles = this._game.session?.combat.particles.object;
         if (particles) particles.visible = f.particles;
         for (const hud of document.querySelectorAll<HTMLElement>('.hud')) hud.style.visibility = f.hud ? '' : 'hidden';
+        const scale = this._game.viewDistanceScale;
+        const meters = this._game.track ? ` (${Math.round(this._game.track.visibleDistance * scale)} m)` : '';
+        this._viewLabel.textContent = `View distance ${scale}x${meters}`;
 
         this._frames++;
         const now = performance.now();
