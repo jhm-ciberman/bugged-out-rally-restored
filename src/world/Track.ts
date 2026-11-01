@@ -231,6 +231,13 @@ async function loadWater(obj: MissionObject, terrain: TerrainHeightfield): Promi
         size,
         surfaceZ,
         depthMap,
+        // Defaults from the WaterBlock constructor.
+        tessellation: field('tesssurface', 50),
+        flowAngle: field('flowangle', 0),
+        flowRate: field('flowrate', 0),
+        distortMagnitude: field('distortmag', 0.05),
+        distortGridScale: field('distortgridscale', 0.1),
+        distortTime: field('distorttime', 0.5),
         texture: await loadTexture(obj.fields.get('surfacetexture') ?? ''),
         opacity: Number(obj.fields.get('surfaceopacity') ?? 0.5),
         waveMagnitude: Number(obj.fields.get('wavemagnitude') ?? 1),

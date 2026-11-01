@@ -76,6 +76,15 @@ export interface WaterSettings {
      * With a map, `opacity` is ignored, as in the engine.
      */
     readonly depthMap: THREE.Texture | null;
+    /** Texture repeats across the water area (`TessSurface`); used with a depth map. */
+    readonly tessellation: number;
+    /** Texture scroll direction in degrees and speed in repeats per second (`FlowAngle`, `FlowRate`); used with a depth map. */
+    readonly flowAngle: number;
+    readonly flowRate: number;
+    /** Texture wobble (`DistortMag`, `DistortGridScale`, `DistortTime`); used with a depth map. */
+    readonly distortMagnitude: number;
+    readonly distortGridScale: number;
+    readonly distortTime: number;
 }
 
 /**
@@ -111,6 +120,20 @@ export class WaterSurface implements IUpdatable {
                 depthMap: { value: settings.depthMap },
                 areaMin: { value: settings.min },
                 areaSize: { value: settings.size },
+                tessellation: { value: settings.tessellation },
+                flow: {
+                    value: new THREE.Vector2(
+                        Math.cos(THREE.MathUtils.degToRad(settings.flowAngle)),
+                        Math.sin(THREE.MathUtils.degToRad(settings.flowAngle)),
+                    ).multiplyScalar(settings.flowRate),
+                },
+                distort: {
+                    value: new THREE.Vector3(
+                        settings.distortMagnitude,
+                        settings.distortGridScale,
+                        Math.max(settings.distortTime, 1e-3),
+                    ),
+                },
             },
             defines: settings.depthMap ? { USE_DEPTH_MAP: '' } : {},
             vertexShader: /* glsl */ `
@@ -139,6 +162,9 @@ export class WaterSurface implements IUpdatable {
                 uniform sampler2D depthMap;
                 uniform vec2 areaMin;
                 uniform vec2 areaSize;
+                uniform float tessellation;
+                uniform vec2 flow;
+                uniform vec3 distort;
                 varying vec2 vWorldXY;
                 void main() {
                     #ifdef USE_DEPTH_MAP
@@ -147,14 +173,26 @@ export class WaterSurface implements IUpdatable {
                     #else
                         float layerAlpha = opacity;
                     #endif
-                    vec2 drift = vec2(time * 0.02, 0.03 * cos(6.2831853 * time / 8.0));
-                    vec2 uv = vWorldXY / textureMeters;
-                    vec4 a = texture2D(map, uv + drift);
-                    // Second layer: rotated 30 degrees about the texture origin.
                     float c = 0.8660254;
                     float s = 0.5;
-                    vec2 uv2 = mat2(c, s, -s, c) * uv + drift * parallax;
-                    vec4 b = texture2D(map, uv2);
+                    #ifdef USE_DEPTH_MAP
+                        // Repeats over the whole area, scrolls along the flow and wobbles.
+                        vec2 drift = flow * time;
+                        vec2 wobble = distort.x * vec2(
+                            cos(vWorldXY.x * distort.y + time / distort.z),
+                            sin(vWorldXY.y * distort.y + time / distort.z)
+                        );
+                        vec2 uv = (vWorldXY - 1024.0 - areaMin) / areaSize * tessellation + wobble;
+                        vec4 a = texture2D(map, uv + drift);
+                        // Second layer: the texture matrix rotates by 30 degrees after the parallax drift.
+                        vec4 b = texture2D(map, mat2(c, s, -s, c) * (uv + drift * parallax));
+                    #else
+                        vec2 drift = vec2(time * 0.02, 0.03 * cos(6.2831853 * time / 8.0));
+                        vec2 uv = vWorldXY / textureMeters;
+                        vec4 a = texture2D(map, uv + drift);
+                        // Second layer: rotated 30 degrees about the texture origin.
+                        vec4 b = texture2D(map, mat2(c, s, -s, c) * uv + drift * parallax);
+                    #endif
                     // Two passes blended over the scene, each with the layer alpha.
                     vec3 color = mix(a.rgb, b.rgb, 1.0 / (2.0 - layerAlpha));
                     float alpha = 1.0 - (1.0 - layerAlpha) * (1.0 - layerAlpha);
