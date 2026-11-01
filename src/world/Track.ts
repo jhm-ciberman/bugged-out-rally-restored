@@ -11,6 +11,7 @@ import { type MissionObject, parseMission, walkMission } from '../torque/Mission
 import { parseTerrain } from '../torque/TerrainFile';
 import { parseColor, parseNumbers, parseRotation, parseVector } from '../torque/TorqueMath';
 import { PhysicalZoneVolume } from './PhysicalZoneVolume';
+import { ShapeThread } from './ShapeThread';
 import { SkyBox } from './SkyBox';
 import { TerrainHeightfield } from './TerrainHeightfield';
 import { bakeTerrainLightmap } from './TerrainLightmap';
@@ -44,6 +45,7 @@ export class Track implements IUpdatable {
         private readonly _spinners: readonly THREE.Object3D[],
         /** Pickups placed in the mission (`Item` objects), with their models. */
         readonly items: readonly THREE.Object3D[],
+        private readonly _threads: ReadonlyMap<MissionObject, ShapeThread>,
     ) {}
 
     /**
@@ -98,10 +100,17 @@ export class Track implements IUpdatable {
         const solids: THREE.Object3D[] = [];
         const spinners: THREE.Object3D[] = [];
         const items: THREE.Object3D[] = [];
+        const threads = new Map<MissionObject, ShapeThread>();
         for (const [i, model] of placed.entries()) {
             if (!model) continue;
             root.add(model);
             const obj = objects[i];
+            if (model.animations.length > 0) {
+                const thread = new ShapeThread(model);
+                // Every datablock whose shape has an `ambient` sequence starts it in onAdd.
+                thread.play('ambient', true);
+                threads.set(obj, thread);
+            }
             if (obj.className === 'InteriorInstance') solids.push(model);
             if (obj.className === 'Item') items.push(model);
             if (obj.className === 'Item' && obj.fields.get('rotate') === '1') spinners.push(model);
@@ -129,7 +138,19 @@ export class Track implements IUpdatable {
             };
         }
 
-        return new Track(number, objects, terrain, root, collision, visibleDistance, sky, water, spinners, items);
+        return new Track(
+            number,
+            objects,
+            terrain,
+            root,
+            collision,
+            visibleDistance,
+            sky,
+            water,
+            spinners,
+            items,
+            threads,
+        );
     }
 
     /**
@@ -149,6 +170,14 @@ export class Track implements IUpdatable {
         // Shapes like the cherry sit off their origin, so they swing around a little, as in the original.
         const angle = -(this._time / ITEM_SPIN_SECONDS) * Math.PI * 2;
         for (const s of this._spinners) s.quaternion.setFromAxisAngle(Z_AXIS, angle);
+        for (const thread of this._threads.values()) thread.update(deltaSeconds);
+    }
+
+    /**
+     * Returns the animation thread of a mission object's shape, or `undefined` when its shape has no sequences.
+     */
+    thread(obj: MissionObject): ShapeThread | undefined {
+        return this._threads.get(obj);
     }
 }
 

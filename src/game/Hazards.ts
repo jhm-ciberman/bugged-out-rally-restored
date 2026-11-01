@@ -19,6 +19,8 @@ const ROLL_MOMENTUM = 200;
 const SPIT_INTERVAL = 1.5;
 /** Seconds from the start of the spit animation to the shot (`frogBlock::startspit`). */
 const SPIT_DELAY = 0.55;
+/** Seconds from the shot until the frog drops its spit pose (`frogBlock::spit` schedules `cyclespit`). */
+const SPIT_RECOVER = 0.4;
 
 interface FrogZone {
     readonly trigger: TriggerVolume;
@@ -52,20 +54,22 @@ interface PendingShot {
 export class Hazards {
     private readonly _frogZones: FrogZone[] = [];
     private readonly _shots: PendingShot[] = [];
+    /** Frogs that spat and go back to rest after a moment. */
+    private readonly _recover: PendingShot[] = [];
     private readonly _rollZones: RollZone[] = [];
     private readonly _rolling: Rolling[] = [];
 
     private readonly _world: CollisionWorld;
 
     constructor(
-        track: Track,
+        private readonly _track: Track,
         private readonly _combat: Combat,
         private readonly _models: ModelLibrary,
         private readonly _audio: AudioSystem | null,
     ) {
-        this._world = track.collision;
-        const frog = (name: string) => track.find(name);
-        for (const o of track.objects) {
+        this._world = _track.collision;
+        const frog = (name: string) => _track.find(name);
+        for (const o of _track.objects) {
             if (o.className !== 'Trigger' || (o.fields.get('datablock') ?? '').toLowerCase() !== 'frogzonetrigger')
                 continue;
             // spitzone1 wakes Frog1 and Frog2; any other zone wakes Frog3.
@@ -80,7 +84,7 @@ export class Hazards {
             snowzone1: [['Snowshooter1', 'Snowshooter2'], SNOWBALL],
             snowzone2: [['Snowshooter3', 'Snowshooter4'], SNOWBALL],
         };
-        for (const o of track.objects) {
+        for (const o of _track.objects) {
             const datablock = (o.fields.get('datablock') ?? '').toLowerCase();
             if (o.className !== 'Trigger' || (datablock !== 'boulderzonetrigger' && datablock !== 'snowzonetrigger'))
                 continue;
@@ -119,7 +123,10 @@ export class Hazards {
             zone.timer = zone.timer === null ? 0 : zone.timer - dt;
             if (zone.timer <= 0) {
                 zone.timer = SPIT_INTERVAL;
-                for (const frog of zone.frogs) this._shots.push({ frog, delay: SPIT_DELAY });
+                for (const frog of zone.frogs) {
+                    this._track.thread(frog)?.play('spit', false);
+                    this._shots.push({ frog, delay: SPIT_DELAY });
+                }
             }
         }
 
@@ -156,6 +163,15 @@ export class Hazards {
             if (shot.delay > 0) continue;
             this._shots.splice(i, 1);
             this._spit(shot.frog);
+            this._recover.push({ frog: shot.frog, delay: SPIT_RECOVER });
+        }
+
+        for (let i = this._recover.length - 1; i >= 0; i--) {
+            const r = this._recover[i];
+            r.delay -= dt;
+            if (r.delay > 0) continue;
+            this._recover.splice(i, 1);
+            this._track.thread(r.frog)?.stop();
         }
     }
 

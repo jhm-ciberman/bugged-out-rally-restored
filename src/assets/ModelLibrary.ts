@@ -50,6 +50,8 @@ export class ModelLibrary {
         try {
             const gltf = await this._loader.loadAsync(url);
             const root = gltf.scene;
+            // Copies made with clone() share these.
+            root.animations = gltf.animations;
             // The exporter wraps the model in a Z-up to Y-up node. The game works in Torque space, so undo it.
             root.getObjectByName('ZtoY')?.quaternion.identity();
             root.traverse((obj) => {
