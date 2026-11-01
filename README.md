@@ -119,4 +119,6 @@ All game assets (models, textures, sounds and music) belong to their original au
 
 It is not my intention to break anyone's copyright in any way. I played Bugged Out Rally as a child and loved it, and this project exists only to preserve it so future generations can still play it.
 
+The game is abandonware: the studio is no longer active and there is no way to buy it. The original release also does not run reliably on modern systems: it works on some Windows 11 machines and fails on others.
+
 If you hold the rights to Bugged Out Rally and want this removed, please open an issue and it will be taken down as soon as possible.
