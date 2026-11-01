@@ -15,9 +15,31 @@ const AHEAD_CONE = 0.7;
 const AHEAD_MIN = 1;
 const AHEAD_RANGE = 500;
 const BEHIND_RANGE = 1000;
+/** Cosine of the cone in which a bot notices an item, and the item's distance range, in meters. */
+const ITEM_CONE = 0.9;
+const ITEM_MIN = 1;
+const ITEM_RANGE = 100;
 
 const _forward = new THREE.Vector3();
 const _to = new THREE.Vector3();
+
+/**
+ * Returns the first item a bot at `position`, facing `forward` (normalized), notices: inside a narrow cone ahead,
+ * within 100 m (the item branch of the exe's target scan).
+ */
+export function scanItems(
+    position: THREE.Vector3,
+    forward: THREE.Vector3,
+    items: Iterable<THREE.Vector3>,
+): THREE.Vector3 | null {
+    for (const item of items) {
+        _to.subVectors(item, position);
+        const distance = _to.length();
+        if (distance < ITEM_MIN || distance > ITEM_RANGE) continue;
+        if (forward.dot(_to.divideScalar(distance)) >= ITEM_CONE) return item;
+    }
+    return null;
+}
 
 /**
  * Whether a bot at `position`, facing `forward` (normalized), sees a target ahead or behind (`scanTargets` in the
@@ -99,11 +121,12 @@ export class Bot {
     }
 
     /**
-     * Decides whether to shoot this tick (`onTargetEnterLOS` / `singleShot` / `behindShot` in aiclientveh.cs):
+     * Scans for targets and items, and decides whether to shoot this tick (`onTargetEnterLOS` / `singleShot` /
+     * `behindShot` in aiclientveh.cs):
      * a Zinger as soon as a car comes into view ahead and then every second while one stays there, and a Magno
      * bomb the same way for cars behind.
      */
-    triggers(dt: number, cars: readonly Car[]): { fire: boolean; drop: boolean } {
+    triggers(dt: number, cars: readonly Car[], items: readonly THREE.Vector3[]): { fire: boolean; drop: boolean } {
         let fire = false;
         let drop = false;
         this._scanTimer -= dt;
@@ -113,6 +136,9 @@ export class Bot {
             _forward.set(0, 1, 0).applyQuaternion(rigid.angPosition);
             const targets = cars.filter((c) => c !== this.car && c.respawnTimer <= 0).map((c) => c.renderPosition);
             const seen = scanTargets(rigid.linPosition, _forward, targets);
+            // An item in view pulls the steering toward it for one tick.
+            const item = scanItems(rigid.linPosition, _forward, items);
+            if (item) this.autopilot.glanceAt(item);
             // The script shoots on the edge and reschedules itself; leaving the view cancels it.
             if (seen.ahead && !this._ahead) {
                 fire = true;

@@ -46,6 +46,9 @@ export class Autopilot {
     /** Called when the car has been stuck too long and should respawn. */
     onGiveUp: (() => void) | null = null;
 
+    /** An item to steer at for the next tick only, and whether there is one. */
+    private readonly _glance = new THREE.Vector3();
+    private _glancing = false;
     /** Where the car was on the previous tick. */
     private readonly _lastPosition = new THREE.Vector3();
     private _stuck = false;
@@ -59,6 +62,15 @@ export class Autopilot {
         this.destination.copy(point);
         this.hasDestination = true;
         this._segment.subVectors(point, this._vehicle.rigid.linPosition).normalize();
+    }
+
+    /**
+     * Steers at `point` instead of the destination for the next tick only, without moving the destination
+     * (an item the bot saw ahead).
+     */
+    glanceAt(point: THREE.Vector3): void {
+        this._glance.copy(point);
+        this._glancing = true;
     }
 
     /**
@@ -85,13 +97,17 @@ export class Autopilot {
         // Reached: inside a square around the destination, or already past it along the way it was set.
         _toGoal.subVectors(this.destination, rigid.linPosition);
         const inSquare = Math.abs(_toGoal.x) < ARRIVE_TOLERANCE && Math.abs(_toGoal.y) < ARRIVE_TOLERANCE;
-        if (inSquare || _toGoal.dot(this._segment) < 0) {
+        // While glancing at an item, only the square counts: the way to the item says nothing about passing.
+        if (inSquare || (!this._glancing && _toGoal.dot(this._segment) < 0)) {
+            this._glancing = false;
             this.hasDestination = false;
             this.onReach?.();
             if (!this.hasDestination) return move;
             return this.nextMove();
         }
 
+        // A glanced item takes over the steering, the alignment and the push for this one tick.
+        if (this._glancing) _toGoal.subVectors(this._glance, rigid.linPosition);
         _local.copy(_toGoal).applyQuaternion(_inv.copy(rigid.angPosition).invert());
         // Angle to the goal, positive to the right. The physics steers by s*|s|, so aim with the square root.
         const angle = Math.atan2(_local.x, _local.y);
@@ -120,6 +136,8 @@ export class Autopilot {
             }
             return move;
         }
+
+        this._glancing = false;
 
         // The bots' edge: a push straight at the destination every tick, on top of the engine.
         if (alignment !== 0) {

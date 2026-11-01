@@ -78,4 +78,19 @@ describe('Autopilot', () => {
         expect(push.y).toBeCloseTo(20);
         expect(push.x).toBeCloseTo(0);
     });
+
+    it('steers toward a glanced item for one tick, then back to the destination', () => {
+        const car = new WheeledVehicle(getVehicleData('Cockroach'), flatWorld());
+        car.setTransform(new THREE.Vector3(0, 0, 102), new THREE.Quaternion());
+        settle(car);
+        const pilot = new Autopilot(car);
+        pilot.reset();
+        pilot.moveTo(new THREE.Vector3(0, 200, 100));
+        pilot.glanceAt(new THREE.Vector3(30, 60, 100));
+        const toward = pilot.nextMove();
+        car.tick(toward);
+        const back = pilot.nextMove();
+        expect(toward.yaw).toBeGreaterThan(0);
+        expect(back.yaw).toBeLessThan(0);
+    });
 });

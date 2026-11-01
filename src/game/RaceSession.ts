@@ -143,6 +143,8 @@ export class RaceSession implements IUpdatable {
     /** Looping sounds placed in the mission (`AudioEmitter`). */
     private readonly _ambient: THREE.PositionalAudio[] = [];
     private _ambientStopped = false;
+    /** Where the items sit, for the bots' scans. */
+    private readonly _itemPositions: THREE.Vector3[];
 
     private constructor(
         readonly track: Track,
@@ -155,6 +157,7 @@ export class RaceSession implements IUpdatable {
     ) {
         this.race = new Race(track, events);
         this.pickups = new Pickups(track.items);
+        this._itemPositions = this.pickups.positions;
         this.zones = new Zones(track);
         this.combat = combat;
         this.hazards = new Hazards(track, combat, combat.models, combat.audio);
@@ -483,7 +486,8 @@ export class RaceSession implements IUpdatable {
         // Weapons work before the green light too; only the throttle waits for it.
         const triggers = new Map<Car, Triggers>([[this.player, this._input.triggers()]]);
         if (racing) {
-            for (const bot of this.bots) triggers.set(bot.car, bot.triggers(TICK_SECONDS, this.cars));
+            for (const bot of this.bots)
+                triggers.set(bot.car, bot.triggers(TICK_SECONDS, this.cars, this._itemPositions));
         }
         this.combat.tick(TICK_SECONDS, this.cars, triggers);
         this.hazards.tick(TICK_SECONDS, this.cars);

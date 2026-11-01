@@ -49,6 +49,11 @@ export class Pickups {
     private readonly _items: PickupItem[] = [];
     onPickup: ((event: PickupEvent) => void) | null = null;
 
+    /** Where every item sits, including those waiting to come back. */
+    get positions(): THREE.Vector3[] {
+        return this._items.map((item) => item.position);
+    }
+
     constructor(models: readonly THREE.Object3D[]) {
         for (const model of models) {
             const mission = model.userData.mission as MissionObject | undefined;
