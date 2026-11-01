@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { textureAnisotropy } from '../game/Settings';
 import { useTorqueFog } from '../render/TorqueFog';
 import { assetUrl, hasAsset } from './AssetPaths';
 import { animateWithIfl, iflForMaterial } from './IflTexture';
@@ -93,7 +94,10 @@ function prepareMesh(mesh: THREE.Mesh): void {
 
     const old = mesh.material as THREE.MeshStandardMaterial;
     const map = old.map;
-    if (map) map.colorSpace = THREE.NoColorSpace;
+    if (map) {
+        map.colorSpace = THREE.NoColorSpace;
+        map.anisotropy = textureAnisotropy();
+    }
     // Torque lit shapes with plain diffuse lighting, no specular.
     const material = useTorqueFog(
         new THREE.MeshLambertMaterial({

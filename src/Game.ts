@@ -5,7 +5,7 @@ import { ModelLibrary } from './assets/ModelLibrary';
 import { AudioSystem } from './audio/AudioSystem';
 import { FlyCamera } from './camera/FlyCamera';
 import { RaceSession } from './game/RaceSession';
-import { renderPixelRatio } from './game/Settings';
+import { renderPixelRatio, textureAnisotropy } from './game/Settings';
 import type { IUpdatable } from './IUpdatable';
 import { DEFAULT_FOV } from './input/VehicleInput';
 import { parseVector } from './torque/TorqueMath';
@@ -213,6 +213,22 @@ export class Game {
      */
     applySettings(): void {
         this._onResize();
+        const anisotropy = textureAnisotropy();
+        this._scene.traverse((obj) => {
+            if (!(obj instanceof THREE.Mesh)) return;
+            for (const material of [obj.material].flat()) {
+                const textures: unknown[] = [(material as { map?: THREE.Texture | null }).map];
+                // The terrain keeps its textures in shader uniforms.
+                if (material instanceof THREE.ShaderMaterial) {
+                    for (const u of Object.values(material.uniforms)) textures.push(...[u.value].flat());
+                }
+                for (const map of textures) {
+                    if (!(map instanceof THREE.Texture) || map.anisotropy === anisotropy) continue;
+                    map.anisotropy = anisotropy;
+                    map.needsUpdate = true;
+                }
+            }
+        });
     }
 
     /**
