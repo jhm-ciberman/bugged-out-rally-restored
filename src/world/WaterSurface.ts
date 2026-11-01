@@ -44,8 +44,9 @@ export function depthAlphaMap(
     const data = new Uint8Array(DEPTH_MAP_SIZE * DEPTH_MAP_SIZE);
     for (let t = 0; t < DEPTH_MAP_SIZE; t++) {
         for (let s = 0; s < DEPTH_MAP_SIZE; s++) {
-            const x = min.x + (s * size.x) / DEPTH_MAP_SIZE;
-            const y = min.y + (t * size.y) / DEPTH_MAP_SIZE;
+            // Sampled at the texel centers, where the GPU reads them.
+            const x = min.x + ((s + 0.5) * size.x) / DEPTH_MAP_SIZE;
+            const y = min.y + ((t + 0.5) * size.y) / DEPTH_MAP_SIZE;
             data[t * DEPTH_MAP_SIZE + s] = Math.round(depthAlpha(surfaceZ - groundAt(x, y), fade) * 255);
         }
     }

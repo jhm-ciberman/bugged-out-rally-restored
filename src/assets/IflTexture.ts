@@ -80,3 +80,13 @@ export function shareIflAnimation(original: THREE.Material, copy: THREE.Material
         if (a.materials.includes(original as THREE.MeshLambertMaterial)) a.materials.push(copy);
     }
 }
+
+/**
+ * Stops animating `material`, which is no longer drawn.
+ */
+export function releaseIflAnimation(material: THREE.Material): void {
+    for (const a of animated) {
+        const i = a.materials.indexOf(material as THREE.MeshLambertMaterial);
+        if (i >= 0) a.materials.splice(i, 1);
+    }
+}

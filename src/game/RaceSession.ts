@@ -140,6 +140,7 @@ export class RaceSession implements IUpdatable {
     private readonly _splashBudget = new Map<Car, number[]>();
     /** Looping sounds placed in the mission (`AudioEmitter`). */
     private readonly _ambient: THREE.PositionalAudio[] = [];
+    private _ambientStopped = false;
 
     private constructor(
         readonly track: Track,
@@ -293,7 +294,9 @@ export class RaceSession implements IUpdatable {
         const obstacles = this.track.collision.obstacles;
         for (const car of this.cars) obstacles.splice(obstacles.indexOf(car.obstacle), 1);
         this._input.dispose();
+        this._ambientStopped = true;
         for (const sound of this._ambient) if (sound.isPlaying) sound.stop();
+        this.pickups.dispose();
         this.combat.dispose();
         for (const car of this.cars) car.dispose();
     }
@@ -304,6 +307,8 @@ export class RaceSession implements IUpdatable {
     private async _startAmbientSounds(audio: AudioSystem): Promise<void> {
         for (const obj of this.track.objects) {
             if (obj.className !== 'AudioEmitter' || obj.fields.get('islooping') === '0') continue;
+            const minGap = Number(obj.fields.get('minloopgap') ?? 0) / 1000;
+            const maxGap = Math.max(minGap, Number(obj.fields.get('maxloopgap') ?? 0) / 1000);
             const sound = await audio.loop(obj.fields.get('profile') ?? '');
             if (!sound) continue;
             // With useProfileDescription the profile sets the distances; otherwise the emitter does.
@@ -313,6 +318,18 @@ export class RaceSession implements IUpdatable {
             }
             sound.position.copy(parseVector(obj.fields.get('position')));
             this.combat.object.add(sound);
+            if (maxGap > 0) {
+                // With a loop gap the emitter plays the sound once, waits, and plays it again.
+                sound.setLoop(false);
+                const ended = sound.onEnded.bind(sound);
+                sound.onEnded = () => {
+                    ended();
+                    const gap = minGap + Math.random() * (maxGap - minGap);
+                    setTimeout(() => {
+                        if (!this._ambientStopped) sound.play();
+                    }, gap * 1000);
+                };
+            }
             sound.play();
             this._ambient.push(sound);
         }

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { shareIflAnimation } from '../assets/IflTexture';
+import { releaseIflAnimation, shareIflAnimation } from '../assets/IflTexture';
+import { useTorqueFog } from '../render/TorqueFog';
 import type { MissionObject } from '../torque/MissionFile';
 import type { Car } from './Car';
 
@@ -84,20 +85,22 @@ export class Pickups {
                 // Back and solid, but invisible until it fades in (`Item::respawn`).
                 item.fadingFor = 0;
                 item.model.visible = true;
+                setFading(item.materials, true);
             }
             if (item.fadingFor !== null) {
                 item.fadingFor += dt;
                 const opacity = THREE.MathUtils.clamp((item.fadingFor - FADE_DELAY) / FADE_SECONDS, 0, 1);
-                for (const m of item.materials) {
-                    m.opacity = opacity;
-                    m.transparent = opacity < 1;
+                for (const m of item.materials) m.opacity = opacity;
+                if (opacity >= 1) {
+                    item.fadingFor = null;
+                    setFading(item.materials, false);
                 }
-                if (opacity >= 1) item.fadingFor = null;
             }
             for (const car of cars) {
                 if (car.isWrecked || car.respawnTimer > 0 || !touches(car, item.position)) continue;
                 if (this._take(car, item.kind)) {
                     item.hiddenFor = RESPAWN_SECONDS;
+                    if (item.fadingFor !== null) setFading(item.materials, false);
                     item.fadingFor = null;
                     item.model.visible = false;
                     this.onPickup?.({ car, kind: item.kind, position: item.position });
@@ -105,6 +108,13 @@ export class Pickups {
                 }
             }
         }
+    }
+
+    /**
+     * Lets go of the items' animated textures. Call when the race ends.
+     */
+    dispose(): void {
+        for (const item of this._items) for (const m of item.materials) releaseIflAnimation(m);
     }
 
     private _take(car: Car, kind: PickupItem['kind']): boolean {
@@ -147,7 +157,8 @@ function ownMaterials(model: THREE.Object3D): THREE.Material[] {
     model.traverse((obj) => {
         if (!(obj instanceof THREE.Mesh)) return;
         const copies = [obj.material].flat().map((m: THREE.Material) => {
-            const copy = m.clone();
+            // clone() drops the fog shader hook, so add it again.
+            const copy = useTorqueFog(m.clone());
             shareIflAnimation(m, copy);
             return copy;
         });
@@ -155,4 +166,18 @@ function ownMaterials(model: THREE.Object3D): THREE.Material[] {
         out.push(...copies);
     });
     return out;
+}
+
+/**
+ * Switches materials between blending (for a fade) and their normal cut-out drawing. The alpha test would
+ * otherwise hide the item until it is half faded in.
+ */
+function setFading(materials: readonly THREE.Material[], fading: boolean): void {
+    for (const m of materials) {
+        if (fading) m.userData.alphaTest ??= m.alphaTest;
+        m.transparent = fading;
+        m.alphaTest = fading ? 0 : (m.userData.alphaTest ?? m.alphaTest);
+        if (!fading) m.opacity = 1;
+        m.needsUpdate = true;
+    }
 }

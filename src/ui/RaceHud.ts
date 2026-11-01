@@ -102,7 +102,10 @@ export class RaceHud {
      */
     render(renderer: THREE.WebGLRenderer, camera: THREE.Camera): void {
         const s = this._session;
-        if (!s || this._finish) return;
+        if (!s || this._finish) {
+            this._targets.hide();
+            return;
+        }
         this._targets.render(s, camera, s.cameraFov, window.innerWidth, window.innerHeight);
         this._arrow.render(renderer, camera, s.player.renderPosition, s.race.nextCheckpointPosition(s.playerRacer));
     }

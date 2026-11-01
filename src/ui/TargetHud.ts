@@ -100,6 +100,15 @@ export class TargetHud {
         if (target) this._barFill.style.width = `${target.health * 100}%`;
     }
 
+    /**
+     * Hides the tags and the crosshair, for when the race view is covered.
+     */
+    hide(): void {
+        for (const tag of this._names) tag.style.display = 'none';
+        this._crosshair.style.display = 'none';
+        this._bar.style.display = 'none';
+    }
+
     private _tag(index: number): HTMLDivElement {
         let tag = this._names[index];
         if (!tag) {
