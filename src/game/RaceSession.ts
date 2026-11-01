@@ -169,6 +169,11 @@ export class RaceSession implements IUpdatable {
         this._input.enabled = enabled;
     }
 
+    /** Whether the player picked the first person view. */
+    get firstPerson(): boolean {
+        return this._input.firstPerson;
+    }
+
     /** Horizontal field of view the player's camera asks for, in degrees. */
     get cameraFov(): number {
         return this._input.fov;

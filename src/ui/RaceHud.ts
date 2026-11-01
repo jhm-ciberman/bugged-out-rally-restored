@@ -7,12 +7,14 @@ import type { RaceSession } from '../game/RaceSession';
 import { DirectionArrow } from './DirectionArrow';
 import { type FinishActions, FinishScreen } from './FinishScreen';
 import { Hud } from './Hud';
+import { TargetHud } from './TargetHud';
 
 /**
  * Connects a race to the HUD, the checkpoint arrow and the countdown sounds (`client/scripts/game.cs`).
  */
 export class RaceHud {
     readonly hud: Hud;
+    private readonly _targets: TargetHud;
     private readonly _arrow = new DirectionArrow();
     private _session: RaceSession | null = null;
 
@@ -30,6 +32,7 @@ export class RaceHud {
         private readonly _finishActions: FinishActions,
     ) {
         this.hud = new Hud(_parent);
+        this._targets = new TargetHud(this.hud.element);
         for (const p of ['AudioCountBeep', 'AudioGoBeep']) _audio.preload(p);
     }
 
@@ -100,6 +103,7 @@ export class RaceHud {
     render(renderer: THREE.WebGLRenderer, camera: THREE.Camera): void {
         const s = this._session;
         if (!s || this._finish) return;
+        this._targets.render(s, camera, s.cameraFov, window.innerWidth, window.innerHeight);
         this._arrow.render(renderer, camera, s.player.renderPosition, s.race.nextCheckpointPosition(s.playerRacer));
     }
 
