@@ -75,11 +75,7 @@ export class Track implements IUpdatable {
         const terrainObj = objects.find((o) => o.className === 'TerrainBlock');
         if (!terrainObj) throw new Error(`track${number}.mis has no TerrainBlock`);
         const terrain = await loadTerrain(terrainObj);
-        const [textures, lightmap] = await Promise.all([
-            Promise.all(terrain.file.materials.map((m) => loadTexture(m.textureName))),
-            Promise.resolve().then(() => bakeTerrainLightmap(terrain, toSun.clone().negate(), sunColor, ambientColor)),
-        ]);
-        root.add(createTerrainObject(terrain, { textures, textureMeters: 64, lightmap }));
+        const textures = await Promise.all(terrain.file.materials.map((m) => loadTexture(m.textureName)));
 
         // Shapes and interiors: ambient plus a sun dimmed by the ambient brightness (sgLightingModel.cc).
         const ambientLevel = (ambientColor.r + ambientColor.g + ambientColor.b) / 3;
@@ -120,7 +116,15 @@ export class Track implements IUpdatable {
         }
         // Static shapes collide through their collision mesh only (interiors use their visible surfaces).
         const shapeSolids = await Promise.all(objects.map((o) => placeCollision(o, models)));
-        for (const solid of shapeSolids) if (solid) solids.push(solid);
+        // Interiors and TSStatic shapes shade the terrain; StaticShape is not a shadow caster in the engine.
+        const casters = [...solids];
+        for (const [i, solid] of shapeSolids.entries()) {
+            if (!solid) continue;
+            solids.push(solid);
+            if (objects[i].className === 'TSStatic') casters.push(solid);
+        }
+        const lightmap = bakeTerrainLightmap(terrain, toSun.clone().negate(), sunColor, ambientColor, casters);
+        root.add(createTerrainObject(terrain, { textures, textureMeters: 64, lightmap }));
         const collision = new CollisionWorld(terrain, solids);
         // The exe scales vehicle gravity by MissionArea.gravityMod, clamped to 0..1 (Lunar uses 0.6).
         const area = objects.find((o) => o.className === 'MissionArea');

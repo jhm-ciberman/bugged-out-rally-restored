@@ -135,6 +135,26 @@ const _closest = { point: new THREE.Vector3(), distance: 0, faceIndex: 0 };
 const _tri = new THREE.Triangle();
 
 /**
+ * Returns the triangles of every mesh under `objects`, in world space, as one non-indexed geometry, or `null`
+ * when there are none.
+ */
+export function mergeWorldTriangles(objects: readonly THREE.Object3D[]): THREE.BufferGeometry | null {
+    const geometries: THREE.BufferGeometry[] = [];
+    for (const root of objects) {
+        root.updateMatrixWorld(true);
+        root.traverse((obj) => {
+            if (!(obj instanceof THREE.Mesh)) return;
+            const g = new THREE.BufferGeometry();
+            g.setAttribute('position', obj.geometry.getAttribute('position').clone());
+            if (obj.geometry.index) g.setIndex(obj.geometry.index.clone());
+            g.applyMatrix4(obj.matrixWorld);
+            geometries.push(g.index ? g.toNonIndexed() : g);
+        });
+    }
+    return geometries.length > 0 ? mergeGeometries(geometries, false) : null;
+}
+
+/**
  * The static solid world a vehicle collides with: the terrain and the interiors (buildings, ramps, fences).
  */
 export class CollisionWorld {
@@ -189,20 +209,8 @@ export class CollisionWorld {
         readonly terrain: TerrainHeightfield,
         solids: readonly THREE.Object3D[],
     ) {
-        const geometries: THREE.BufferGeometry[] = [];
-        for (const solid of solids) {
-            solid.updateMatrixWorld(true);
-            solid.traverse((obj) => {
-                if (!(obj instanceof THREE.Mesh)) return;
-                const g = new THREE.BufferGeometry();
-                g.setAttribute('position', obj.geometry.getAttribute('position').clone());
-                if (obj.geometry.index) g.setIndex(obj.geometry.index.clone());
-                g.applyMatrix4(obj.matrixWorld);
-                geometries.push(g.index ? g.toNonIndexed() : g);
-            });
-        }
-        if (geometries.length > 0) {
-            const merged = mergeGeometries(geometries, false);
+        const merged = mergeWorldTriangles(solids);
+        if (merged) {
             this._bvh = new MeshBVH(merged);
             merged.boundsTree = this._bvh;
             // Rays must hit both sides: the engine's ray casts have no back-face rule.
