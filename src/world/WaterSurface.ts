@@ -23,12 +23,16 @@ export interface ShoreFade {
 
 /**
  * Returns the alpha of the water `depth` meters above the ground (`WaterBlock::GenerateDepthTextures`).
+ *
+ * @param shore For the shore map: past the shore depth the alpha falls again, so the shore texture only
+ *     shows in a band along the coast.
  */
-export function depthAlpha(depth: number, fade: ShoreFade): number {
+export function depthAlpha(depth: number, fade: ShoreFade, shore = false): number {
     if (depth <= 0) return fade.minAlpha;
-    if (depth >= fade.shoreDepth) return fade.maxAlpha;
     const range = fade.maxAlpha - fade.minAlpha;
-    return range * (depth / fade.shoreDepth) ** (1 / fade.depthGradient) + fade.minAlpha;
+    const ramp = (t: number) => range * THREE.MathUtils.clamp(t, 0, 1) ** (1 / fade.depthGradient) + fade.minAlpha;
+    if (depth < fade.shoreDepth) return ramp(depth / fade.shoreDepth);
+    return shore ? fade.maxAlpha - ramp((depth - fade.shoreDepth) / fade.shoreDepth) : fade.maxAlpha;
 }
 
 /**
@@ -40,6 +44,7 @@ export function depthAlphaMap(
     surfaceZ: number,
     groundAt: (x: number, y: number) => number,
     fade: ShoreFade,
+    shore = false,
 ): THREE.DataTexture {
     const data = new Uint8Array(DEPTH_MAP_SIZE * DEPTH_MAP_SIZE);
     for (let t = 0; t < DEPTH_MAP_SIZE; t++) {
@@ -47,7 +52,8 @@ export function depthAlphaMap(
             // Sampled at the texel centers, where the GPU reads them.
             const x = min.x + ((s + 0.5) * size.x) / DEPTH_MAP_SIZE;
             const y = min.y + ((t + 0.5) * size.y) / DEPTH_MAP_SIZE;
-            data[t * DEPTH_MAP_SIZE + s] = Math.round(depthAlpha(surfaceZ - groundAt(x, y), fade) * 255);
+            const alpha = depthAlpha(surfaceZ - groundAt(x, y), fade, shore);
+            data[t * DEPTH_MAP_SIZE + s] = Math.round(THREE.MathUtils.clamp(alpha, 0, 1) * 255);
         }
     }
     const tex = new THREE.DataTexture(data, DEPTH_MAP_SIZE, DEPTH_MAP_SIZE, THREE.RedFormat);
@@ -86,6 +92,29 @@ export interface WaterSettings {
     readonly distortMagnitude: number;
     readonly distortGridScale: number;
     readonly distortTime: number;
+    /** The extra passes of the depth map path, or null without a depth map. */
+    readonly passes: WaterPasses | null;
+}
+
+/**
+ * The shore, specular and environment passes of depth-mask water (`fluidRender.cc`).
+ */
+export interface WaterPasses {
+    /** Alpha of the shore band (the depth map built in shore mode). */
+    readonly shoreMap: THREE.Texture;
+    /** Texture drawn along the shore (`ShoreTexture`). */
+    readonly shoreTexture: THREE.Texture;
+    /** Shore texture repeats across the water area (`TessShore`). */
+    readonly shoreTessellation: number;
+    /** Where the sun glints (`specularMaskTex`). */
+    readonly specularMask: THREE.Texture;
+    readonly specularColor: THREE.Color;
+    readonly specularPower: number;
+    /** Unit vector toward the sun. */
+    readonly toSun: THREE.Vector3;
+    /** Sky reflected on the water (`envMapOverTexture`). */
+    readonly envMap: THREE.Texture;
+    readonly envMapIntensity: number;
 }
 
 /**
@@ -121,6 +150,15 @@ export class WaterSurface implements IUpdatable {
                 depthMap: { value: settings.depthMap },
                 areaMin: { value: settings.min },
                 areaSize: { value: settings.size },
+                shoreMap: { value: settings.passes?.shoreMap ?? null },
+                shoreTexture: { value: repeat(settings.passes?.shoreTexture) },
+                shoreTessellation: { value: settings.passes?.shoreTessellation ?? 1 },
+                specularMask: { value: repeat(settings.passes?.specularMask) },
+                specularColor: { value: settings.passes?.specularColor ?? new THREE.Color(1, 1, 1) },
+                specularPower: { value: settings.passes?.specularPower ?? 1 },
+                toSun: { value: settings.passes?.toSun ?? new THREE.Vector3(0, 0, 1) },
+                envMap: { value: repeat(settings.passes?.envMap) },
+                envMapIntensity: { value: settings.passes?.envMapIntensity ?? 0 },
                 tessellation: { value: settings.tessellation },
                 flow: {
                     value: new THREE.Vector2(
@@ -136,19 +174,24 @@ export class WaterSurface implements IUpdatable {
                     ),
                 },
             },
-            defines: settings.depthMap ? { USE_DEPTH_MAP: '' } : {},
+            defines: {
+                ...(settings.depthMap ? { USE_DEPTH_MAP: '' } : {}),
+                ...(settings.passes ? { USE_WATER_PASSES: '' } : {}),
+            },
             vertexShader: /* glsl */ `
                 #include <fog_pars_vertex>
                 uniform float time;
                 uniform float surfaceZ;
                 uniform float waveFactor;
                 varying vec2 vWorldXY;
+                varying vec3 vWorldPos;
                 void main() {
                     vec3 transformed = position;
                     // Waves use terrain-local meters (world + 1024).
                     vec2 local = position.xy + 1024.0;
                     transformed.z = surfaceZ + (sin(0.05 * local.x + time) + sin(0.05 * local.y + time)) * waveFactor;
                     vWorldXY = local;
+                    vWorldPos = transformed;
                     gl_Position = projectionMatrix * modelViewMatrix * vec4(transformed, 1.0);
                     #include <fog_vertex>
                 }
@@ -166,7 +209,23 @@ export class WaterSurface implements IUpdatable {
                 uniform float tessellation;
                 uniform vec2 flow;
                 uniform vec3 distort;
+                uniform sampler2D shoreMap;
+                uniform sampler2D shoreTexture;
+                uniform float shoreTessellation;
+                uniform sampler2D specularMask;
+                uniform vec3 specularColor;
+                uniform float specularPower;
+                uniform vec3 toSun;
+                uniform sampler2D envMap;
+                uniform float envMapIntensity;
                 varying vec2 vWorldXY;
+                varying vec3 vWorldPos;
+
+                // Draws a pass with straight alpha over premultiplied color, like SRC_ALPHA, ONE_MINUS_SRC_ALPHA.
+                vec4 over(vec4 below, vec3 color, float alpha) {
+                    return vec4(color * alpha + below.rgb * (1.0 - alpha), alpha + below.a * (1.0 - alpha));
+                }
+
                 void main() {
                     #ifdef USE_DEPTH_MAP
                         // The depth map path draws both layers at full opacity, faded by the map.
@@ -195,8 +254,32 @@ export class WaterSurface implements IUpdatable {
                         vec4 b = texture2D(map, mat2(c, s, -s, c) * uv + drift * parallax);
                     #endif
                     // Two passes blended over the scene, each with the layer alpha.
-                    vec3 color = mix(a.rgb, b.rgb, 1.0 / (2.0 - layerAlpha));
-                    float alpha = 1.0 - (1.0 - layerAlpha) * (1.0 - layerAlpha);
+                    vec4 result = over(over(vec4(0.0), a.rgb, layerAlpha), b.rgb, layerAlpha);
+                    #ifdef USE_WATER_PASSES
+                        vec2 area = (vWorldXY - 1024.0 - areaMin) / areaSize;
+                        // Shore: its own repeat, the same wobble and drift, faded by the shore band.
+                        vec4 shore = texture2D(shoreTexture, area * shoreTessellation + wobble + drift);
+                        result = over(result, shore.rgb, shore.a * texture2D(shoreMap, area).r);
+                        // Specular: the mask turned 30 degrees and scaled by 0.2, lit by the sun's half angle.
+                        vec3 eyeVec = normalize(cameraPosition - vWorldPos);
+                        vec3 halfVec = normalize(toSun + eyeVec);
+                        float glint = pow(max(halfVec.z, 0.0), specularPower);
+                        vec4 mask = texture2D(specularMask, mat2(c, s, -s, c) * (uv * 0.2));
+                        result = over(result, mask.rgb * specularColor * glint, mask.a * glint * layerAlpha);
+                        // Environment: a reflection lookup from the eye-to-point vector, with a liquid wobble.
+                        vec3 v = vec3(vWorldPos.x - cameraPosition.x, cameraPosition.y - vWorldPos.y,
+                            max(abs(vWorldPos.z - cameraPosition.z), 0.001));
+                        float dist = length(vWorldPos - cameraPosition);
+                        vec2 envUv = dist < 0.001 ? vec2(0.0) : v.xy * ((dist - v.z) / (dist * dist));
+                        float a1 = cos(vWorldXY.x / 150.0 + time / distort.z);
+                        float a2 = sin(vWorldXY.y / 150.0 + time / distort.z);
+                        envUv = envUv * 0.5 + 0.5 + vec2(a1, a2) * 0.01;
+                        vec4 env = texture2D(envMap, envUv);
+                        float swing = (a1 + a2) * 0.15 + 0.5;
+                        result = over(result, env.rgb, env.a * swing * envMapIntensity * layerAlpha);
+                    #endif
+                    vec3 color = result.a > 0.0 ? result.rgb / result.a : vec3(0.0);
+                    float alpha = result.a;
                     gl_FragColor = vec4(color, alpha);
                     #include <fog_fragment>
                 }
@@ -210,4 +293,14 @@ export class WaterSurface implements IUpdatable {
     update(deltaSeconds: number): void {
         this._time.value += deltaSeconds;
     }
+}
+
+/**
+ * Makes a texture tile, and returns it.
+ */
+function repeat(tex: THREE.Texture | undefined): THREE.Texture | null {
+    if (!tex) return null;
+    tex.colorSpace = THREE.NoColorSpace;
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    return tex;
 }

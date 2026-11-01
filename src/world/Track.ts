@@ -17,7 +17,7 @@ import { SunFlare } from './SunFlare';
 import { TerrainHeightfield } from './TerrainHeightfield';
 import { bakeTerrainLightmap } from './TerrainLightmap';
 import { createTerrainObject } from './TerrainRenderer';
-import { depthAlphaMap, WaterSurface } from './WaterSurface';
+import { depthAlphaMap, type WaterPasses, WaterSurface } from './WaterSurface';
 
 /** Seconds per turn of a spinning item (`sRotationSpeed` in item.cc). */
 const ITEM_SPIN_SECONDS = 3;
@@ -96,7 +96,7 @@ export class Track implements IUpdatable {
         if (sky) root.add(sky.object);
 
         const waterObj = objects.find((o) => o.className === 'WaterBlock');
-        const water = waterObj ? await loadWater(waterObj, terrain) : null;
+        const water = waterObj ? await loadWater(waterObj, terrain, toSun) : null;
         if (water) root.add(water.object);
 
         const placed = await Promise.all(objects.map((o) => placeObject(o, models)));
@@ -221,7 +221,7 @@ async function loadSky(obj: MissionObject, visibleDistance: number, camera: THRE
     return new SkyBox(faces, visibleDistance, camera);
 }
 
-async function loadWater(obj: MissionObject, terrain: TerrainHeightfield): Promise<WaterSurface> {
+async function loadWater(obj: MissionObject, terrain: TerrainHeightfield, toSun: THREE.Vector3): Promise<WaterSurface> {
     const pos = parseVector(obj.fields.get('position'));
     const scale = parseVector(obj.fields.get('scale'), 1);
     const min = new THREE.Vector2(pos.x, pos.y);
@@ -229,20 +229,35 @@ async function loadWater(obj: MissionObject, terrain: TerrainHeightfield): Promi
     const surfaceZ = pos.z + scale.z;
     const field = (name: string, fallback: number) => Number(obj.fields.get(name) ?? fallback);
     // Defaults from the WaterBlock constructor.
-    const depthMap =
-        obj.fields.get('usedepthmask') === '1'
-            ? depthAlphaMap(min, size, surfaceZ, (x, y) => terrain.heightAt(x, y), {
-                  shoreDepth: field('shoredepth', 20),
-                  minAlpha: field('minalpha', 0.03),
-                  maxAlpha: field('maxalpha', 1),
-                  depthGradient: field('depthgradient', 1),
-              })
-            : null;
+    const fade = {
+        shoreDepth: field('shoredepth', 20),
+        minAlpha: field('minalpha', 0.03),
+        maxAlpha: field('maxalpha', 1),
+        depthGradient: field('depthgradient', 1),
+    };
+    const groundAt = (x: number, y: number) => terrain.heightAt(x, y);
+    const useDepthMask = obj.fields.get('usedepthmask') === '1';
+    const depthMap = useDepthMask ? depthAlphaMap(min, size, surfaceZ, groundAt, fade) : null;
+    const texture = (name: string) => loadTexture(obj.fields.get(name) ?? '');
+    const passes: WaterPasses | null = useDepthMask
+        ? {
+              shoreMap: depthAlphaMap(min, size, surfaceZ, groundAt, fade, true),
+              shoreTexture: await texture('shoretexture'),
+              shoreTessellation: field('tessshore', 60),
+              specularMask: await texture('specularmasktex'),
+              specularColor: parseColor(obj.fields.get('specularcolor') ?? '1 1 1 1'),
+              specularPower: field('specularpower', 6),
+              toSun,
+              envMap: await texture('envmapovertexture'),
+              envMapIntensity: field('envmapintensity', 0.4),
+          }
+        : null;
     return new WaterSurface({
         min,
         size,
         surfaceZ,
         depthMap,
+        passes,
         // Defaults from the WaterBlock constructor.
         tessellation: field('tesssurface', 50),
         flowAngle: field('flowangle', 0),
