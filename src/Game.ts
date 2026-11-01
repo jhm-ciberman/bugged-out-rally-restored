@@ -325,10 +325,16 @@ function disposeObject(root: THREE.Object3D): void {
     });
 }
 
+/** Screen shape the game was made for (800x600). */
+const ORIGINAL_ASPECT = 4 / 3;
+
 /**
- * Returns the vertical field of view that shows `horizontal` degrees across a screen of `aspect`.
+ * Returns the vertical field of view for a field of view of `horizontal` degrees, as Torque measures it.
+ *
+ * Wider screens than 4:3 keep the original's vertical view and see more at the sides; narrower ones keep
+ * the full horizontal view. So no screen shows less than the original did.
  */
 function verticalFov(aspect: number, horizontal: number): number {
     const h = THREE.MathUtils.degToRad(horizontal);
-    return THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(h / 2) / aspect));
+    return THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(h / 2) / Math.min(aspect, ORIGINAL_ASPECT)));
 }
