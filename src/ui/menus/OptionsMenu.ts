@@ -1,15 +1,20 @@
 import { assetUrl } from '../../assets/AssetPaths';
 import { getSettings, type Settings, updateSettings } from '../../game/Settings';
+import { safariSlider, styleTorqueCheckbox } from '../GuiControls';
 import { MenuScreen, rel } from './MenuScreen';
 
-/** `GuiSafariPopUpMenuProfile`: orange fill, white bold text, black 2 px border. */
+/** `GuiSafariPopUpMenuProfile`: orange fill and white text, drawn like the original menu box. */
 const POPUP_STYLE: Partial<CSSStyleDeclaration> = {
+    appearance: 'none',
     background: 'rgb(255, 192, 55)',
     color: '#fff',
-    border: '2px solid #000',
-    font: 'bold 20px Arial, sans-serif',
+    // A raised box, as the original draws it: light top-left, dark bottom-right.
+    borderStyle: 'solid',
+    borderWidth: '1px',
+    borderColor: '#fff #000 #000 #fff',
+    font: '20px Arial, sans-serif',
     textAlign: 'center',
-    textShadow: '1px 1px 0 #000',
+    textAlignLast: 'center',
     cursor: 'pointer',
 };
 
@@ -27,15 +32,9 @@ export class OptionsMenu extends MenuScreen {
             onChange(getSettings());
         };
 
+        // `GuiSliderCtrl` with 5 ticks, as in optionsMenu.gui.
         const slider = (rect: ReturnType<typeof rel>, min: number, value: number, set: (v: number) => void) => {
-            const input = this.add(document.createElement('input'), rect);
-            input.type = 'range';
-            input.min = String(min);
-            input.max = '1';
-            input.step = '0.01';
-            input.value = String(value);
-            input.style.accentColor = 'rgb(255, 192, 55)';
-            input.addEventListener('input', () => set(Number(input.value)));
+            this.add(safariSlider(rect.w, rect.h, [min, 1], 5, value, set), rect);
         };
         slider(rel(464, 164, 240, 45), 0, s.soundVolume, (v) => changed({ soundVolume: v }));
         slider(rel(464, 100, 236, 50), 0, s.musicVolume, (v) => changed({ musicVolume: v }));
@@ -104,6 +103,7 @@ export class OptionsMenu extends MenuScreen {
         const box = this.add(document.createElement('input'), rect);
         box.type = 'checkbox';
         box.checked = checked;
+        styleTorqueCheckbox(box);
         return box;
     }
 
