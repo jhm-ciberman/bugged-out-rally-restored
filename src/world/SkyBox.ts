@@ -10,7 +10,7 @@ const HORIZON_BAND = 60;
  * with a band that fades from the fog color into the sky (`terrain/sky.cc`).
  */
 export class SkyBox implements IUpdatable {
-    readonly object = new THREE.Group();
+    readonly object = Object.assign(new THREE.Group(), { name: 'Sky' });
 
     /**
      * @param faces Textures for south, east, north and west walls, then the top (the order of the `.dml` file).
@@ -89,6 +89,7 @@ function createSkyMaterial(map: THREE.Texture): THREE.ShaderMaterial {
         uniforms: {
             map: { value: map },
             fogColor: torqueFogUniforms.torqueFogColor,
+            fogEnabled: torqueFogUniforms.torqueFogEnabled,
             band: { value: HORIZON_BAND },
         },
         vertexShader: /* glsl */ `
@@ -103,13 +104,14 @@ function createSkyMaterial(map: THREE.Texture): THREE.ShaderMaterial {
         fragmentShader: /* glsl */ `
             uniform sampler2D map;
             uniform vec3 fogColor;
+            uniform float fogEnabled;
             uniform float band;
             varying vec2 vUv;
             varying float vHeight;
             void main() {
                 vec3 sky = texture2D(map, vUv).rgb;
                 // Below the horizon the engine shows the clear color, which is the fog color.
-                float k = vHeight <= 0.0 ? 1.0 : 1.0 - clamp(vHeight / band, 0.0, 1.0);
+                float k = vHeight <= 0.0 ? 1.0 : (1.0 - clamp(vHeight / band, 0.0, 1.0)) * fogEnabled;
                 gl_FragColor = vec4(mix(sky, fogColor, k), 1.0);
             }
         `,

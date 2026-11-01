@@ -13,6 +13,8 @@ export const torqueFogUniforms = {
     torqueFogRange: { value: new THREE.Vector2(400, 500) },
     /** x: visible distance inside the volume (0 = no volume), y: bottom height, z: top height. */
     torqueFogVolume: { value: new THREE.Vector3(0, 0, 0) },
+    /** 1 draws the fog, 0 turns it off (a debug switch). */
+    torqueFogEnabled: { value: 1 },
 };
 
 const PARS_VERTEX = /* glsl */ `
@@ -27,6 +29,7 @@ const PARS_FRAGMENT = /* glsl */ `
 uniform vec3 torqueFogColor;
 uniform vec2 torqueFogRange;
 uniform vec3 torqueFogVolume;
+uniform float torqueFogEnabled;
 varying vec3 vTorqueFogWorld;
 
 float torqueFogAmount(vec3 worldPos) {
@@ -46,7 +49,7 @@ float torqueFogAmount(vec3 worldPos) {
         float inside = dz > 0.001 ? d * overlap / dz : (lo >= torqueFogVolume.y && lo <= torqueFogVolume.z ? d : 0.0);
         haze += inside / torqueFogVolume.x;
     }
-    return clamp(haze, 0.0, 1.0);
+    return clamp(haze, 0.0, 1.0) * torqueFogEnabled;
 }
 `;
 

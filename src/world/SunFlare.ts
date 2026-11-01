@@ -50,7 +50,7 @@ class Channel {
  * and once on top of it while the sun is in sight.
  */
 export class SunFlare {
-    readonly object = new THREE.Group();
+    readonly object = Object.assign(new THREE.Group(), { name: 'SunFlare' });
     private readonly _behind: THREE.Sprite;
     private readonly _onTop: THREE.Sprite;
     private readonly _color: THREE.Color;
