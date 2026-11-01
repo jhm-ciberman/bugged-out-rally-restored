@@ -15,6 +15,7 @@ export type Action =
     | 'altReverse'
     | 'altFire'
     | 'altDrop'
+    | 'adjustZoom'
     | 'zoom'
     | 'firstPerson';
 
@@ -33,6 +34,7 @@ export const ACTIONS: readonly { readonly action: Action; readonly name: string 
     { action: 'altReverse', name: 'Alt Reverse' },
     { action: 'altFire', name: 'Alt Fire Zinger' },
     { action: 'altDrop', name: 'Alt Drop Bomb' },
+    { action: 'adjustZoom', name: 'Adjust Zoom' },
     { action: 'zoom', name: 'Toggle Zoom' },
     { action: 'firstPerson', name: 'Switch 1st/3rd' },
 ];
@@ -53,6 +55,7 @@ export const DEFAULT_BINDINGS: Readonly<Record<Action, string>> = {
     altReverse: 'KeyS',
     altFire: 'Mouse0',
     altDrop: 'Mouse1',
+    adjustZoom: 'KeyR',
     zoom: 'KeyE',
     firstPerson: 'Tab',
 };

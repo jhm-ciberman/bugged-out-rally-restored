@@ -18,6 +18,8 @@ export interface Settings {
     textureDetail: number;
     /** Opens every bug and track, whatever the player's winnings. */
     unlockAll: boolean;
+    /** Horizontal field of view while the zoom key is held, in degrees (`$Pref::player::CurrentFOV`). */
+    zoomFov: number;
     /** Bindings changed on the controls menu; `null` clears one. Actions not listed keep their default. */
     keyBindings: Partial<Record<Action, string | null>>;
 }
@@ -34,6 +36,7 @@ const DEFAULTS: Settings = {
     textureDetail: 0,
     unlockAll: false,
     keyBindings: {},
+    zoomFov: 45,
 };
 
 /** Share of the screen's pixel ratio (at most 2) each render quality draws at. */

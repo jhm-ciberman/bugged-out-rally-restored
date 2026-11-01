@@ -1,4 +1,4 @@
-import { getSettings } from '../game/Settings';
+import { getSettings, updateSettings } from '../game/Settings';
 import type { VehicleMove } from '../vehicle/WheeledVehicle';
 import { type Action, actionOf, bindingOf } from './KeyBindings';
 
@@ -9,9 +9,11 @@ const RESET_KEY = 'Enter';
 const KEYBOARD_TURN_SPEED = 0.1;
 /** Steering change per pixel of mouse movement at a 90 degree field of view (`getMouseAdjustAmount`). */
 const MOUSE_TURN_PER_PIXEL = 0.01;
-/** Horizontal field of view, in degrees, without and with the zoom key (`defaultFov`, `CurrentFOV`). */
+/** Horizontal field of view without the zoom key, in degrees (`$pref::Player::defaultFov`). */
 export const DEFAULT_FOV = 90;
-const ZOOM_FOV = 45;
+/** Widest and narrowest zoom the adjust key cycles through, in degrees. */
+const ZOOM_FOV_MAX = 45;
+const ZOOM_FOV_MIN = 10;
 
 /** Torque's number for each browser mouse button (`MouseEvent.button`): left, middle, right. */
 const MOUSE_BUTTONS = ['Mouse0', 'Mouse2', 'Mouse1'];
@@ -70,7 +72,7 @@ export class VehicleInput {
 
     /** Horizontal field of view, in degrees, for the zoom key's state. */
     get fov(): number {
-        return this._isHeld('zoom') ? ZOOM_FOV : DEFAULT_FOV;
+        return this._isHeld('zoom') ? getSettings().zoomFov : DEFAULT_FOV;
     }
 
     /**
@@ -175,7 +177,15 @@ export class VehicleInput {
 
     private _press(input: string, repeat: boolean): void {
         this._held.add(input);
-        if (!repeat && actionOf(input) === 'firstPerson') this._firstPerson = !this._firstPerson;
+        if (repeat) return;
+        const action = actionOf(input);
+        if (action === 'firstPerson') this._firstPerson = !this._firstPerson;
+        if (action === 'adjustZoom') {
+            // The original binds this to a `toggleZoomFOV` it never defines. Each press halves the zoom
+            // angle and wraps back to the widest.
+            const next = getSettings().zoomFov / 2;
+            updateSettings({ zoomFov: next < ZOOM_FOV_MIN ? ZOOM_FOV_MAX : next });
+        }
     }
 }
 

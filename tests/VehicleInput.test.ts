@@ -29,4 +29,21 @@ describe('VehicleInput', () => {
         input.enabled = false;
         expect(input.nextMove().throttle).toBe(0);
     });
+
+    it('narrows the zoom with each Adjust Zoom press and wraps back to the widest', () => {
+        const input = new VehicleInput(new EventTarget() as HTMLElement);
+        const zoomed = () => {
+            window.dispatchEvent(keyEvent('keydown', 'KeyE'));
+            const fov = input.fov;
+            window.dispatchEvent(keyEvent('keyup', 'KeyE'));
+            return fov;
+        };
+        const seen = [zoomed()];
+        for (let i = 0; i < 3; i++) {
+            window.dispatchEvent(keyEvent('keydown', 'KeyR'));
+            window.dispatchEvent(keyEvent('keyup', 'KeyR'));
+            seen.push(zoomed());
+        }
+        expect(seen).toEqual([45, 22.5, 11.25, 45]);
+    });
 });
