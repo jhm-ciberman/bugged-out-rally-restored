@@ -14,6 +14,7 @@ import { MainMenu } from './ui/menus/MainMenu';
 import type { MenuScreen } from './ui/menus/MenuScreen';
 import { OptionsMenu } from './ui/menus/OptionsMenu';
 import { PlayerSelection } from './ui/menus/PlayerSelection';
+import { QuitPage } from './ui/menus/QuitPage';
 import { isTrackUnlocked, VenueSelection } from './ui/menus/VenueSelection';
 
 /** Fewest racers for a first place to open the next track (`addPlayerWinnings`). */
@@ -90,10 +91,15 @@ export class App {
                 start: () => this._playerSelection(),
                 about: () => this._openDialog(new AboutPage(() => this._closeDialog())),
                 options: () => this._options(),
+                // `exitMain` stops the sound and shows the publisher's page; its Quit button leaves.
                 quit: () => {
-                    this._setPage(null);
                     this._game.audio.stopMusic();
-                    this.start();
+                    this._setPage(
+                        new QuitPage(() => {
+                            this._setPage(null);
+                            this.start();
+                        }),
+                    );
                 },
             }),
         );
