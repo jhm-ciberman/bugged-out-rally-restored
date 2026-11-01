@@ -12,6 +12,15 @@ const NAME_COLOR = 'rgba(0, 255, 0, 0.63)';
 /** Size and offset below the center of the target's health bar (`damageRect`, `damageOffset`). */
 const BAR = { width: 50, height: 4, offsetY: 10 };
 
+/** Health bar over a name tag (`damageRect = "30 4"`, `damageOffset = "0 -20"`). */
+const NAME_BAR = { width: 30, height: 4, offsetY: -20 };
+
+interface NameTag {
+    readonly root: HTMLDivElement;
+    readonly name: HTMLDivElement;
+    readonly fill: HTMLDivElement;
+}
+
 const _dir = new THREE.Vector3();
 const _camDir = new THREE.Vector3();
 const _to = new THREE.Vector3();
@@ -25,7 +34,7 @@ export class TargetHud {
     private readonly _crosshair = document.createElement('img');
     private readonly _bar = document.createElement('div');
     private readonly _barFill = document.createElement('div');
-    private readonly _names: HTMLDivElement[] = [];
+    private readonly _names: NameTag[] = [];
     private readonly _nameLayer = document.createElement('div');
 
     constructor(parent: HTMLElement) {
@@ -70,13 +79,13 @@ export class TargetHud {
         const player = session.player;
         let shown = 0;
         for (const car of session.cars) {
-            if (car === player || car.respawnTimer > 0) continue;
+            // The control object has no tag; with the fly camera that is the camera, so the player's car gets one.
+            if ((car === player && !session.freeCamera) || car.respawnTimer > 0) continue;
             _to.copy(car.renderPosition).sub(eye);
-            const distSq = _to.lengthSq();
-            // The engine compares the squared distance with the visible distance, and the cosine of the angle
-            // with half the field of view in radians, so tags only show for close cars near the middle.
-            if (distSq === 0 || distSq > visibleDistance) continue;
-            const dist = Math.sqrt(distSq);
+            const dist = _to.length();
+            // Seen in the original: tags show out to the visible distance. The view cone compares the cosine
+            // of the angle with half the field of view in radians (`GuiShapeNameHud::onRender`).
+            if (dist === 0 || dist > visibleDistance) continue;
             if (_dir.copy(_to).divideScalar(dist).dot(_camDir) < THREE.MathUtils.degToRad(fov) / 2) continue;
             if (world.castRay(eye, car.renderPosition)) continue;
             _p.copy(car.renderPosition)
@@ -86,12 +95,13 @@ export class TargetHud {
             const fadeDistance = visibleDistance * DISTANCE_FADE;
             const opacity = dist < fadeDistance ? 1 : 1 - (dist - fadeDistance) / (visibleDistance - fadeDistance);
             const tag = this._tag(shown++);
-            tag.textContent = nameOf(session, car);
-            tag.style.opacity = String(opacity);
-            tag.style.left = `${((_p.x + 1) / 2) * width}px`;
-            tag.style.top = `${((1 - _p.y) / 2) * height}px`;
+            tag.name.textContent = nameOf(session, car);
+            tag.name.style.opacity = String(opacity);
+            tag.fill.style.width = `${car.health * 100}%`;
+            tag.root.style.left = `${((_p.x + 1) / 2) * width}px`;
+            tag.root.style.top = `${((1 - _p.y) / 2) * height}px`;
         }
-        for (let i = shown; i < this._names.length; i++) this._names[i].style.display = 'none';
+        for (let i = shown; i < this._names.length; i++) this._names[i].root.style.display = 'none';
 
         const firstPerson = session.firstPerson;
         this._crosshair.style.display = firstPerson ? '' : 'none';
@@ -104,27 +114,45 @@ export class TargetHud {
      * Hides the tags and the crosshair, for when the race view is covered.
      */
     hide(): void {
-        for (const tag of this._names) tag.style.display = 'none';
+        for (const tag of this._names) tag.root.style.display = 'none';
         this._crosshair.style.display = 'none';
         this._bar.style.display = 'none';
     }
 
-    private _tag(index: number): HTMLDivElement {
+    private _tag(index: number): NameTag {
         let tag = this._names[index];
         if (!tag) {
-            tag = document.createElement('div');
+            const root = document.createElement('div');
+            root.style.position = 'absolute';
             // GuiDefaultProfile: Arial 14. The text sits centered above the point.
-            Object.assign(tag.style, {
+            const name = document.createElement('div');
+            Object.assign(name.style, {
                 position: 'absolute',
                 font: '14px Arial, sans-serif',
                 color: NAME_COLOR,
                 whiteSpace: 'nowrap',
                 transform: 'translate(-50%, -100%)',
             });
-            this._nameLayer.append(tag);
+            // The car's health above the name (`damageRect`, `damageOffset`, damage colors of the name HUD).
+            const bar = document.createElement('div');
+            Object.assign(bar.style, {
+                position: 'absolute',
+                left: `${-NAME_BAR.width / 2}px`,
+                top: `${NAME_BAR.offsetY}px`,
+                width: `${NAME_BAR.width}px`,
+                height: `${NAME_BAR.height}px`,
+                boxSizing: 'border-box',
+                border: '1px solid rgb(255, 153, 0)',
+            });
+            const fill = document.createElement('div');
+            Object.assign(fill.style, { height: '100%', background: 'rgb(0, 255, 0)' });
+            bar.append(fill);
+            root.append(bar, name);
+            this._nameLayer.append(root);
+            tag = { root, name, fill };
             this._names.push(tag);
         }
-        tag.style.display = '';
+        tag.root.style.display = '';
         return tag;
     }
 }
