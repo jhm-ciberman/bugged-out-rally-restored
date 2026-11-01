@@ -16,6 +16,10 @@ export class VehicleSounds {
     private _squeal: THREE.PositionalAudio | null = null;
     private _jet: THREE.PositionalAudio | null = null;
     private readonly _profiles: Record<string, string>;
+    /** Whether the body counted as in the water at the last update (`Vehicle::inLiquid`, client side). */
+    private _inLiquid = false;
+    /** Whether the wake splash already played since the car touched the surface. */
+    private _wakePlayed = false;
 
     private constructor(
         private readonly _vehicle: WheeledVehicle,
@@ -40,8 +44,17 @@ export class VehicleSounds {
             audio.loop(p.jetSound),
         ]);
         for (const loop of [s._engine, s._squeal, s._jet]) if (loop) object.add(loop);
-        audio.preload(p.hardImpactSound);
-        audio.preload(p.softImpactSound);
+        for (const name of [
+            p.hardImpactSound,
+            p.softImpactSound,
+            p.impactWaterEasy,
+            p.impactWaterMedium,
+            p.impactWaterHard,
+            p.exitingWater,
+            p.waterWakeSound,
+        ]) {
+            if (name) audio.preload(name);
+        }
         return s;
     }
 
@@ -87,6 +100,41 @@ export class VehicleSounds {
         } else if (loop.isPlaying) {
             loop.stop();
         }
+    }
+
+    /**
+     * Plays the water sounds (`Vehicle::updatePos` and `updateFroth`): a splash by speed when the body goes
+     * under, another when it comes out fast, and one wake splash when it first touches the surface.
+     *
+     * @param coverage Share of the body under water, 0 to 1.
+     * @param touchingSurface Whether the water surface crosses the body.
+     */
+    water(coverage: number, touchingSurface: boolean): void {
+        const p = this._profiles;
+        const n = (key: string) => Number(p[key] ?? 0);
+        const speed = this._vehicle.rigid.linVelocity.length();
+        if (!this._inLiquid && coverage >= 0.8) {
+            let profile: string | null = null;
+            if (speed >= n('hardSplashSoundVelocity')) profile = p.impactWaterHard;
+            else if (speed >= n('mediumSplashSoundVelocity')) profile = p.impactWaterMedium;
+            else if (speed >= n('softSplashSoundVelocity')) profile = p.impactWaterEasy;
+            if (profile) this._play(profile);
+            this._inLiquid = true;
+        } else if (this._inLiquid && coverage < 0.8) {
+            if (speed >= n('exitSplashSoundVelocity')) this._play(p.exitingWater);
+            this._inLiquid = false;
+        }
+        // The engine starts the wake sound once and keeps its handle while the car stays on the surface.
+        if (!touchingSurface) this._wakePlayed = false;
+        else if (!this._wakePlayed) {
+            this._wakePlayed = true;
+            this._play(p.waterWakeSound);
+        }
+    }
+
+    private _play(profile: string | undefined): void {
+        if (profile)
+            void this._audio.play3d(profile, this._attach.position.clone(), this._attach.parent ?? this._attach);
     }
 
     /**

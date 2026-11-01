@@ -169,6 +169,15 @@ export class Car {
     }
 
     /**
+     * Plays the splash sounds for the car's state in the water this frame.
+     *
+     * @param touchingSurface Whether the water surface crosses the body.
+     */
+    waterSounds(touchingSurface: boolean): void {
+        this._sounds?.water(this.vehicle.waterCoverage, touchingSurface);
+    }
+
+    /**
      * Stops the car's sounds.
      */
     dispose(): void {

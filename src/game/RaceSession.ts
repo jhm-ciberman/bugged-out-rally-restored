@@ -6,7 +6,14 @@ import type { AudioSystem } from '../audio/AudioSystem';
 import { ChaseCamera } from '../camera/ChaseCamera';
 import type { IUpdatable } from '../IUpdatable';
 import { VehicleInput } from '../input/VehicleInput';
-import { TIRE_DUST } from '../render/Particles';
+import {
+    BUG_BUBBLE,
+    BUG_SPLASH,
+    BUG_SPLASH_MIST,
+    ejectionDirection,
+    type ParticleLook,
+    TIRE_DUST,
+} from '../render/Particles';
 import type { MissionObject } from '../torque/MissionFile';
 import { parseRotation, parseVector } from '../torque/TorqueMath';
 import { TICK_SECONDS, type VehicleMove } from '../vehicle/WheeledVehicle';
@@ -26,6 +33,67 @@ const WATER_DAMAGE = 0.075;
 /** Milliseconds of emitter time per dust particle (`tireEmitter.ejectionPeriodMS`). */
 const DUST_PERIOD_MS = 10;
 const WATER_DAMAGE_PERIOD = 0.05;
+/** Car speed below which the water does not splash (`splashVelEpsilon`, the same for every car). */
+const SPLASH_VEL_EPSILON = 0.6;
+/** Milliseconds of splash emission per m/s per second (`splashFreqMod`). */
+const SPLASH_FREQ_MOD = 300;
+
+interface SplashEmitter {
+    readonly look: ParticleLook;
+    readonly periodMs: number;
+    readonly speed: number;
+    readonly speedVariance: number;
+    readonly thetaMin: number;
+    readonly thetaMax: number;
+    readonly phiVariance: number;
+    readonly offset: number;
+    readonly inherit: number;
+}
+
+/**
+ * The car splash emitters (`BugSplashEmitter`, `BugSplashMistEmitter`, `BugBubbleEmitter`).
+ *
+ * In the original the first two have a `lifetimeMS` of 100 and 250, and an emitter's clock starts when the car
+ * is created, so they stop for good right after spawning and only the bubbles show. That looks unintended,
+ * so here all three keep emitting.
+ */
+const SPLASH_EMITTERS: readonly SplashEmitter[] = [
+    {
+        look: BUG_SPLASH,
+        periodMs: 10,
+        speed: 3,
+        speedVariance: 1,
+        thetaMin: 60,
+        thetaMax: 120,
+        phiVariance: 90,
+        offset: 0,
+        inherit: 0.2,
+    },
+    {
+        look: BUG_SPLASH_MIST,
+        periodMs: 10,
+        speed: 3,
+        speedVariance: 2,
+        thetaMin: 0,
+        thetaMax: 90,
+        phiVariance: 360,
+        offset: 0,
+        inherit: 0,
+    },
+    {
+        look: BUG_BUBBLE,
+        periodMs: 20,
+        speed: 4,
+        speedVariance: 0.5,
+        thetaMin: 0,
+        thetaMax: 120,
+        phiVariance: 360,
+        offset: 0.5,
+        inherit: 0,
+    },
+];
+const _surface = new THREE.Vector3();
+
 /** Seconds a wrecked car stays gone before it reappears at its last checkpoint (native `onDestroy`). */
 const RESPAWN_SECONDS = 4;
 
@@ -68,6 +136,8 @@ export class RaceSession implements IUpdatable {
     private _accumulator = 0;
     private readonly _dustBudget = new Map<Car, number>();
     private _botsStarted = false;
+    /** Unspent emission per car and splash emitter, in particles. */
+    private readonly _splashBudget = new Map<Car, number[]>();
     /** Looping sounds placed in the mission (`AudioEmitter`). */
     private readonly _ambient: THREE.PositionalAudio[] = [];
 
@@ -155,6 +225,7 @@ export class RaceSession implements IUpdatable {
         for (const car of this.cars) {
             car.draw(alpha, deltaSeconds);
             this._emitDust(car, deltaSeconds);
+            this._splash(car, deltaSeconds);
         }
         this.combat.update(deltaSeconds, alpha);
         this.hazards.update();
@@ -240,6 +311,50 @@ export class RaceSession implements IUpdatable {
             sound.play();
             this._ambient.push(sound);
         }
+    }
+
+    /**
+     * Splashes where a car meets the water surface, more the faster it goes, and plays its water sounds
+     * (`Vehicle::updateFroth`, `collidingWithWater`).
+     */
+    private _splash(car: Car, dt: number): void {
+        const water = this.track.collision.water;
+        const p = car.vehicle.rigid.linPosition;
+        const height = car.vehicle.data.bounds.max.z - car.vehicle.data.bounds.min.z;
+        // The engine casts a ray down from the top of the box to the car's origin, looking for the surface.
+        const touching =
+            water !== null &&
+            car.respawnTimer <= 0 &&
+            this.track.collision.isInWater(_surface.set(p.x, p.y, water.surfaceZ)) &&
+            p.z <= water.surfaceZ &&
+            p.z + height >= water.surfaceZ;
+        car.waterSounds(touching);
+        if (!touching || !water) return;
+
+        const velocity = car.vehicle.rigid.linVelocity;
+        let speed = velocity.length();
+        if (speed < SPLASH_VEL_EPSILON) speed = 0;
+        // Milliseconds of emission this frame (`splashFreqMod`).
+        const ms = speed * SPLASH_FREQ_MOD * dt;
+        let budgets = this._splashBudget.get(car);
+        if (!budgets) {
+            budgets = SPLASH_EMITTERS.map(() => 0);
+            this._splashBudget.set(car, budgets);
+        }
+        const at = new THREE.Vector3();
+        const v = new THREE.Vector3();
+        SPLASH_EMITTERS.forEach((e, i) => {
+            const total = budgets[i] + ms / e.periodMs;
+            const count = Math.floor(total);
+            budgets[i] = total - count;
+            for (let k = 0; k < count; k++) {
+                ejectionDirection(v, e.thetaMin, e.thetaMax, e.phiVariance);
+                at.copy(p).setZ(water.surfaceZ).addScaledVector(v, e.offset);
+                v.multiplyScalar(e.speed + (Math.random() * 2 - 1) * e.speedVariance);
+                v.addScaledVector(velocity, e.inherit);
+                this.combat.particles.emit(e.look, at, v);
+            }
+        });
     }
 
     /**

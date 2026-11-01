@@ -427,3 +427,72 @@ export const ROCKET_BUBBLE: ParticleLook = {
     dragCoefficient: 0,
     useInvAlpha: false,
 };
+
+/**
+ * Writes a random ejection direction around +Z into `out`, as a particle emitter picks it: `theta` degrees
+ * away from the axis and `phi` degrees around it (`ParticleEmitter::addParticle` with `phiReferenceVel` 0).
+ */
+export function ejectionDirection(
+    out: THREE.Vector3,
+    thetaMin: number,
+    thetaMax: number,
+    phiVariance: number,
+): THREE.Vector3 {
+    const theta = THREE.MathUtils.degToRad(thetaMin + (thetaMax - thetaMin) * Math.random());
+    const phi = THREE.MathUtils.degToRad(phiVariance * Math.random());
+    // The axis tilts about -X (z cross y), then turns about Z.
+    return out.set(0, Math.sin(theta), Math.cos(theta)).applyAxisAngle(_zAxis, phi);
+}
+
+const _zAxis = new THREE.Vector3(0, 0, 1);
+
+/** Water thrown sideways where a car meets the surface (`BugSplashParticle`). */
+export const BUG_SPLASH: ParticleLook = {
+    texture: '~/data/shapes/particles/bigsplash',
+    lifetime: 0.6,
+    lifetimeVariance: 0.1,
+    colors: [
+        [0, 0, 0, 1],
+        [0.2, 0.2, 0.2, 0.8],
+        [0.4, 0.4, 0.4, 0.1],
+    ],
+    sizes: [1, 0.8, 0.4],
+    times: [0, 0.5, 1],
+    gravityCoefficient: 0.4,
+    dragCoefficient: 1,
+    useInvAlpha: false,
+};
+
+/** Spray where a car meets the surface (`BugSplashMist`). */
+export const BUG_SPLASH_MIST: ParticleLook = {
+    texture: '~/data/shapes/particles/bubble',
+    lifetime: 0.4,
+    lifetimeVariance: 0.1,
+    colors: [
+        [0.4, 0.4, 0.9, 0.1],
+        [0.4, 0.4, 0.9, 0.1],
+        [0.4, 0.4, 0.9, 0.1],
+    ],
+    sizes: [0.1, 0.1, 0.1],
+    times: [0, 0.5, 1],
+    gravityCoefficient: -0.05,
+    dragCoefficient: 2,
+    useInvAlpha: false,
+};
+
+/** Bubbles where a car meets the surface (`BugBubbleParticle`). */
+export const BUG_BUBBLE: ParticleLook = {
+    texture: '~/data/shapes/particles/bubble',
+    lifetime: 0.4,
+    lifetimeVariance: 0.1,
+    colors: [
+        [0.7, 0.8, 1, 0.4],
+        [0.7, 0.8, 1, 0.4],
+        [0.7, 0.8, 1, 0.1],
+    ],
+    sizes: [0.6, 0.3, 0.1],
+    times: [0, 0.5, 1],
+    gravityCoefficient: -0.7,
+    dragCoefficient: 0,
+    useInvAlpha: false,
+};
