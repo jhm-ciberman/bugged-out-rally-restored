@@ -20,7 +20,7 @@ const LENGTH_RADII = 10;
 /** Shortest volume, in meters (`Shadow::setLightDir`). */
 const MIN_LENGTH = 1;
 /** Most receiving triangles per car. */
-const MAX_TRIANGLES = 2048;
+const MAX_TRIANGLES = 8192;
 /**
  * Camera distances at which the shadow bends toward straight down and shortens (`Shadow::smDistanceSkew`):
  * distance in meters, direction skew and length skew, interpolated between rows.
@@ -32,7 +32,8 @@ const DISTANCE_SKEW = [
     [1000, 1, 0.7],
 ] as const;
 
-const SILHOUETTE = new THREE.MeshBasicMaterial({ color: 0xffffff, fog: false });
+// Every face, whatever its texture: the engine rasterizes the shape's polygons into a 1-bit image.
+const SILHOUETTE = new THREE.MeshBasicMaterial({ color: 0xffffff, fog: false, side: THREE.DoubleSide });
 
 const VERTEX = /* glsl */ `
 varying vec3 vWorld;
@@ -115,6 +116,8 @@ class CarShadow {
             blendSrcAlpha: THREE.ZeroFactor,
             blendDstAlpha: THREE.OneFactor,
             depthWrite: false,
+            // Interiors are drawn double sided, so their faces receive the shadow from either side.
+            side: THREE.DoubleSide,
             polygonOffset: true,
             polygonOffsetFactor: -2,
             polygonOffsetUnits: -2,
@@ -152,6 +155,8 @@ export class CarShadows {
     private readonly _interiors: MeshBVH | null;
     private readonly _terrain: TerrainHeightfield;
     private readonly _sunDir: THREE.Vector3;
+    /** The car's own materials while its silhouette is drawn. */
+    private readonly _swapped = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>();
 
     constructor(track: Track, cars: readonly Car[]) {
         this._terrain = track.terrain;
@@ -243,17 +248,21 @@ export class CarShadows {
         cam.updateMatrixWorld();
 
         const view = shadow.car.view.object;
-        const materials = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>();
+        const materials = this._swapped;
         view.traverse((obj) => {
             if (obj instanceof THREE.Mesh) {
                 materials.set(obj, obj.material);
                 obj.material = SILHOUETTE;
             }
         });
-        renderer.setRenderTarget(shadow.target);
-        renderer.clear();
-        renderer.render(view, cam);
-        for (const [mesh, material] of materials) mesh.material = material;
+        try {
+            renderer.setRenderTarget(shadow.target);
+            renderer.clear();
+            renderer.render(view, cam);
+        } finally {
+            for (const [mesh, material] of materials) mesh.material = material;
+            materials.clear();
+        }
     }
 
     private _gatherReceivers(
