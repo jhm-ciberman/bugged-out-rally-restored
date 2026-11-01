@@ -48,3 +48,37 @@ describe('CollisionWorld.findContacts', () => {
         expect(hit!.normal.x).toBeCloseTo(-1);
     });
 });
+
+describe('CollisionWorld.isInWater', () => {
+    const water = (tile: boolean) => ({
+        min: new THREE.Vector2(-48, -72),
+        max: new THREE.Vector2(-48 + 1280, -72 + 1280),
+        bottomZ: 1,
+        surfaceZ: 151,
+        viscosity: 10,
+        density: 1,
+        tile,
+    });
+
+    it('finds water inside the block', () => {
+        const world = worldWith(new THREE.Object3D());
+        world.water = water(true);
+        expect(world.isInWater(new THREE.Vector3(500, 500, 100))).toBe(true);
+        expect(world.isInWater(new THREE.Vector3(500, 500, 200))).toBe(false);
+    });
+
+    it('repeats a tiled block every 2048 m, like the terrain', () => {
+        const world = worldWith(new THREE.Object3D());
+        world.water = water(true);
+        expect(world.isInWater(new THREE.Vector3(500, 500 - 2048, 100))).toBe(true);
+        expect(world.isInWater(new THREE.Vector3(500 + 2048 * 3, 500, 100))).toBe(true);
+        // Between the copies of a block smaller than a terrain tile there is no water.
+        expect(world.isInWater(new THREE.Vector3(1500, 500, 100))).toBe(false);
+    });
+
+    it('keeps an untiled block to its own rectangle', () => {
+        const world = worldWith(new THREE.Object3D());
+        world.water = water(false);
+        expect(world.isInWater(new THREE.Vector3(500, 500 - 2048, 100))).toBe(false);
+    });
+});

@@ -96,7 +96,7 @@ export class Track implements IUpdatable {
         if (sky) root.add(sky.object);
 
         const waterObj = objects.find((o) => o.className === 'WaterBlock');
-        const water = waterObj ? await loadWater(waterObj, terrain, toSun) : null;
+        const water = waterObj ? await loadWater(waterObj, terrain, toSun, visibleDistance) : null;
         if (water) root.add(water.object);
 
         const placed = await Promise.all(objects.map((o) => placeObject(o, models)));
@@ -138,6 +138,7 @@ export class Track implements IUpdatable {
                 surfaceZ: pos.z + scale.z,
                 viscosity: Number(waterObj.fields.get('viscosity') ?? 15),
                 density: Number(waterObj.fields.get('density') ?? 1),
+                tile: waterObj.fields.get('tile') !== '0',
             };
         }
 
@@ -176,7 +177,7 @@ export class Track implements IUpdatable {
         this._time += deltaSeconds;
         updateIflTextures(this._time);
         this._sky?.update();
-        this._water?.update(deltaSeconds);
+        this._water?.update(deltaSeconds, this._camera);
         // Item::renderImage replaces the rotation with a spin about the shape origin, clockwise from above.
         // Shapes like the cherry sit off their origin, so they swing around a little, as in the original.
         const angle = -(this._time / ITEM_SPIN_SECONDS) * Math.PI * 2;
@@ -221,7 +222,12 @@ async function loadSky(obj: MissionObject, visibleDistance: number, camera: THRE
     return new SkyBox(faces, visibleDistance, camera);
 }
 
-async function loadWater(obj: MissionObject, terrain: TerrainHeightfield, toSun: THREE.Vector3): Promise<WaterSurface> {
+async function loadWater(
+    obj: MissionObject,
+    terrain: TerrainHeightfield,
+    toSun: THREE.Vector3,
+    visibleDistance: number,
+): Promise<WaterSurface> {
     const pos = parseVector(obj.fields.get('position'));
     const scale = parseVector(obj.fields.get('scale'), 1);
     const min = new THREE.Vector2(pos.x, pos.y);
@@ -255,6 +261,8 @@ async function loadWater(obj: MissionObject, terrain: TerrainHeightfield, toSun:
     return new WaterSurface({
         min,
         size,
+        tile: obj.fields.get('tile') !== '0',
+        coverRadius: visibleDistance,
         surfaceZ,
         depthMap,
         passes,

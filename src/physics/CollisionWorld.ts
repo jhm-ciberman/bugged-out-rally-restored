@@ -34,7 +34,12 @@ export interface WaterVolume {
     readonly surfaceZ: number;
     readonly viscosity: number;
     readonly density: number;
+    /** Whether the block repeats every terrain tile (`tile`, on unless a mission turns it off). */
+    readonly tile: boolean;
 }
+
+/** Size of a terrain tile; tiled water repeats with the same period (`fluid::IsFluidAtXY`). */
+const WATER_TILE = 2048;
 
 /**
  * A box that pushes cars or changes their grip (`PhysicalZone` in the exe). A centripetal zone swirls cars
@@ -151,14 +156,14 @@ export class CollisionWorld {
     isInWater(point: THREE.Vector3): boolean {
         const w = this.water;
         if (!w) return false;
-        return (
-            point.x >= w.min.x &&
-            point.x <= w.max.x &&
-            point.y >= w.min.y &&
-            point.y <= w.max.y &&
-            point.z >= w.bottomZ &&
-            point.z <= w.surfaceZ
-        );
+        if (point.z < w.bottomZ || point.z > w.surfaceZ) return false;
+        let x = point.x - w.min.x;
+        let y = point.y - w.min.y;
+        if (w.tile) {
+            x = THREE.MathUtils.euclideanModulo(x, WATER_TILE);
+            y = THREE.MathUtils.euclideanModulo(y, WATER_TILE);
+        }
+        return x >= 0 && y >= 0 && x <= w.max.x - w.min.x && y <= w.max.y - w.min.y;
     }
 
     /**

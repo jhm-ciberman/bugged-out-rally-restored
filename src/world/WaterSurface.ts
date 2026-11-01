@@ -1,11 +1,12 @@
 import * as THREE from 'three';
-import type { IUpdatable } from '../IUpdatable';
 import { useTorqueFog } from '../render/TorqueFog';
 
 /** Meters per repeat of the water texture (legacy fluid path: `squareSize * 6`). */
 const TEXTURE_METERS = 48;
 /** Grid spacing of the wave mesh, in meters. */
 const CELL = 8;
+/** Size of a terrain tile; tiled water repeats with the same period (`fluid::IsFluidAtXY`). */
+const WATER_TILE = 2048;
 /** Texels per side of the depth alpha map (`eDepthMapResolution`). */
 const DEPTH_MAP_SIZE = 512;
 
@@ -71,6 +72,10 @@ export interface WaterSettings {
     readonly min: THREE.Vector2;
     /** Size of the water area. */
     readonly size: THREE.Vector2;
+    /** Whether the area repeats every terrain tile (`tile`). */
+    readonly tile: boolean;
+    /** How far around the camera the surface is drawn, in meters (the visible distance). */
+    readonly coverRadius: number;
     /** Height of the calm surface. */
     readonly surfaceZ: number;
     readonly texture: THREE.Texture;
@@ -121,15 +126,15 @@ export interface WaterPasses {
  * The surface of a Torque water block: two drifting layers of the surface texture over a gentle wave
  * (`fluidRender.cc`). With a depth map, shallow water fades out toward the shore.
  */
-export class WaterSurface implements IUpdatable {
+export class WaterSurface {
     readonly object: THREE.Mesh;
     private readonly _time = { value: 0 };
 
     constructor(settings: WaterSettings) {
-        const cols = Math.max(1, Math.round(settings.size.x / CELL));
-        const rows = Math.max(1, Math.round(settings.size.y / CELL));
-        const geometry = new THREE.PlaneGeometry(settings.size.x, settings.size.y, cols, rows);
-        geometry.translate(settings.min.x + settings.size.x / 2, settings.min.y + settings.size.y / 2, 0);
+        // A square around the camera, moved in whole cells so the waves stay put; the shader keeps only
+        // the parts over the water area and its copies.
+        const cells = Math.ceil((settings.coverRadius * 2) / CELL) + 2;
+        const geometry = new THREE.PlaneGeometry(cells * CELL, cells * CELL, cells, cells);
 
         const tex = settings.texture;
         tex.colorSpace = THREE.NoColorSpace;
@@ -150,6 +155,7 @@ export class WaterSurface implements IUpdatable {
                 depthMap: { value: settings.depthMap },
                 areaMin: { value: settings.min },
                 areaSize: { value: settings.size },
+                tilePeriod: { value: settings.tile ? WATER_TILE : 0 },
                 shoreMap: { value: settings.passes?.shoreMap ?? null },
                 shoreTexture: { value: repeat(settings.passes?.shoreTexture) },
                 shoreTessellation: { value: settings.passes?.shoreTessellation ?? 1 },
@@ -186,13 +192,16 @@ export class WaterSurface implements IUpdatable {
                 varying vec2 vWorldXY;
                 varying vec3 vWorldPos;
                 void main() {
-                    vec3 transformed = position;
+                    vec4 world = modelMatrix * vec4(position, 1.0);
                     // Waves use terrain-local meters (world + 1024).
-                    vec2 local = position.xy + 1024.0;
-                    transformed.z = surfaceZ + (sin(0.05 * local.x + time) + sin(0.05 * local.y + time)) * waveFactor;
+                    vec2 local = world.xy + 1024.0;
+                    world.z = surfaceZ + (sin(0.05 * local.x + time) + sin(0.05 * local.y + time)) * waveFactor;
                     vWorldXY = local;
-                    vWorldPos = transformed;
-                    gl_Position = projectionMatrix * modelViewMatrix * vec4(transformed, 1.0);
+                    vWorldPos = world.xyz;
+                    // The fog code expects the local position in "transformed"; the model matrix only moves.
+                    vec3 transformed = world.xyz - modelMatrix[3].xyz;
+                    vec4 mvPosition = viewMatrix * world;
+                    gl_Position = projectionMatrix * mvPosition;
                     #include <fog_vertex>
                 }
             `,
@@ -206,6 +215,7 @@ export class WaterSurface implements IUpdatable {
                 uniform sampler2D depthMap;
                 uniform vec2 areaMin;
                 uniform vec2 areaSize;
+                uniform float tilePeriod;
                 uniform float tessellation;
                 uniform vec2 flow;
                 uniform vec3 distort;
@@ -227,9 +237,13 @@ export class WaterSurface implements IUpdatable {
                 }
 
                 void main() {
+                    // Position inside the water area; tiled water repeats with the terrain (fluid::IsFluidAtXY).
+                    vec2 inArea = vWorldXY - 1024.0 - areaMin;
+                    if (tilePeriod > 0.0) inArea = mod(inArea, tilePeriod);
+                    if (any(lessThan(inArea, vec2(0.0))) || any(greaterThan(inArea, areaSize))) discard;
                     #ifdef USE_DEPTH_MAP
                         // The depth map path draws both layers at full opacity, faded by the map.
-                        float layerAlpha = texture2D(depthMap, (vWorldXY - 1024.0 - areaMin) / areaSize).r;
+                        float layerAlpha = texture2D(depthMap, inArea / areaSize).r;
                     #else
                         float layerAlpha = opacity;
                     #endif
@@ -242,7 +256,7 @@ export class WaterSurface implements IUpdatable {
                             cos(vWorldXY.x * distort.y + time / distort.z),
                             sin(vWorldXY.y * distort.y + time / distort.z)
                         );
-                        vec2 uv = (vWorldXY - 1024.0 - areaMin) / areaSize * tessellation + wobble;
+                        vec2 uv = inArea / areaSize * tessellation + wobble;
                         vec4 a = texture2D(map, uv + drift);
                         // Second layer: the texture matrix rotates by 30 degrees after the parallax drift.
                         vec4 b = texture2D(map, mat2(c, s, -s, c) * (uv + drift * parallax));
@@ -256,7 +270,7 @@ export class WaterSurface implements IUpdatable {
                     // Two passes blended over the scene, each with the layer alpha.
                     vec4 result = over(over(vec4(0.0), a.rgb, layerAlpha), b.rgb, layerAlpha);
                     #ifdef USE_WATER_PASSES
-                        vec2 area = (vWorldXY - 1024.0 - areaMin) / areaSize;
+                        vec2 area = inArea / areaSize;
                         // Shore: its own repeat, the same wobble and drift, faded by the shore band.
                         vec4 shore = texture2D(shoreTexture, area * shoreTessellation + wobble + drift);
                         result = over(result, shore.rgb, shore.a * texture2D(shoreMap, area).r);
@@ -288,10 +302,20 @@ export class WaterSurface implements IUpdatable {
         this.object = new THREE.Mesh(geometry, useTorqueFog(material));
         this.object.name = 'Water';
         this.object.renderOrder = 10;
+        // The vertex shader lifts the surface to the water height, away from the geometry bounds.
+        this.object.frustumCulled = false;
     }
 
-    update(deltaSeconds: number): void {
+    /**
+     * Advances the waves and keeps the surface around `camera`.
+     */
+    update(deltaSeconds: number, camera: THREE.Camera): void {
         this._time.value += deltaSeconds;
+        this.object.position.set(
+            Math.round(camera.position.x / CELL) * CELL,
+            Math.round(camera.position.y / CELL) * CELL,
+            0,
+        );
     }
 }
 
