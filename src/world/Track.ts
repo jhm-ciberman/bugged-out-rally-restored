@@ -16,7 +16,7 @@ import { SkyBox } from './SkyBox';
 import { TerrainHeightfield } from './TerrainHeightfield';
 import { bakeTerrainLightmap } from './TerrainLightmap';
 import { createTerrainObject } from './TerrainRenderer';
-import { WaterSurface } from './WaterSurface';
+import { depthAlphaMap, WaterSurface } from './WaterSurface';
 
 /** Seconds per turn of a spinning item (`sRotationSpeed` in item.cc). */
 const ITEM_SPIN_SECONDS = 3;
@@ -93,7 +93,7 @@ export class Track implements IUpdatable {
         if (sky) root.add(sky.object);
 
         const waterObj = objects.find((o) => o.className === 'WaterBlock');
-        const water = waterObj ? await loadWater(waterObj) : null;
+        const water = waterObj ? await loadWater(waterObj, terrain) : null;
         if (water) root.add(water.object);
 
         const placed = await Promise.all(objects.map((o) => placeObject(o, models)));
@@ -209,13 +209,28 @@ async function loadSky(obj: MissionObject, visibleDistance: number, camera: THRE
     return new SkyBox(faces, visibleDistance, camera);
 }
 
-async function loadWater(obj: MissionObject): Promise<WaterSurface> {
+async function loadWater(obj: MissionObject, terrain: TerrainHeightfield): Promise<WaterSurface> {
     const pos = parseVector(obj.fields.get('position'));
     const scale = parseVector(obj.fields.get('scale'), 1);
+    const min = new THREE.Vector2(pos.x, pos.y);
+    const size = new THREE.Vector2(scale.x, scale.y);
+    const surfaceZ = pos.z + scale.z;
+    const field = (name: string, fallback: number) => Number(obj.fields.get(name) ?? fallback);
+    // Defaults from the WaterBlock constructor.
+    const depthMap =
+        obj.fields.get('usedepthmask') === '1'
+            ? depthAlphaMap(min, size, surfaceZ, (x, y) => terrain.heightAt(x, y), {
+                  shoreDepth: field('shoredepth', 20),
+                  minAlpha: field('minalpha', 0.03),
+                  maxAlpha: field('maxalpha', 1),
+                  depthGradient: field('depthgradient', 1),
+              })
+            : null;
     return new WaterSurface({
-        min: new THREE.Vector2(pos.x, pos.y),
-        size: new THREE.Vector2(scale.x, scale.y),
-        surfaceZ: pos.z + scale.z,
+        min,
+        size,
+        surfaceZ,
+        depthMap,
         texture: await loadTexture(obj.fields.get('surfacetexture') ?? ''),
         opacity: Number(obj.fields.get('surfaceopacity') ?? 0.5),
         waveMagnitude: Number(obj.fields.get('wavemagnitude') ?? 1),

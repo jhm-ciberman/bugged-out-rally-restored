@@ -6,6 +6,55 @@ import { useTorqueFog } from '../render/TorqueFog';
 const TEXTURE_METERS = 48;
 /** Grid spacing of the wave mesh, in meters. */
 const CELL = 8;
+/** Texels per side of the depth alpha map (`eDepthMapResolution`). */
+const DEPTH_MAP_SIZE = 512;
+
+/**
+ * How a water block fades out over shallow ground (`ShoreDepth`, `MinAlpha`, `MaxAlpha`, `DepthGradient`).
+ */
+export interface ShoreFade {
+    /** Depth, in meters, where the water reaches its full alpha. */
+    readonly shoreDepth: number;
+    readonly minAlpha: number;
+    readonly maxAlpha: number;
+    /** Bends the fade: above 1 the water turns solid sooner, below 1 later. */
+    readonly depthGradient: number;
+}
+
+/**
+ * Returns the alpha of the water `depth` meters above the ground (`WaterBlock::GenerateDepthTextures`).
+ */
+export function depthAlpha(depth: number, fade: ShoreFade): number {
+    if (depth <= 0) return fade.minAlpha;
+    if (depth >= fade.shoreDepth) return fade.maxAlpha;
+    const range = fade.maxAlpha - fade.minAlpha;
+    return range * (depth / fade.shoreDepth) ** (1 / fade.depthGradient) + fade.minAlpha;
+}
+
+/**
+ * Builds the depth alpha map of a water area from the ground height under it.
+ */
+export function depthAlphaMap(
+    min: THREE.Vector2,
+    size: THREE.Vector2,
+    surfaceZ: number,
+    groundAt: (x: number, y: number) => number,
+    fade: ShoreFade,
+): THREE.DataTexture {
+    const data = new Uint8Array(DEPTH_MAP_SIZE * DEPTH_MAP_SIZE);
+    for (let t = 0; t < DEPTH_MAP_SIZE; t++) {
+        for (let s = 0; s < DEPTH_MAP_SIZE; s++) {
+            const x = min.x + (s * size.x) / DEPTH_MAP_SIZE;
+            const y = min.y + (t * size.y) / DEPTH_MAP_SIZE;
+            data[t * DEPTH_MAP_SIZE + s] = Math.round(depthAlpha(surfaceZ - groundAt(x, y), fade) * 255);
+        }
+    }
+    const tex = new THREE.DataTexture(data, DEPTH_MAP_SIZE, DEPTH_MAP_SIZE, THREE.RedFormat);
+    tex.magFilter = THREE.LinearFilter;
+    tex.minFilter = THREE.LinearFilter;
+    tex.needsUpdate = true;
+    return tex;
+}
 
 /**
  * Settings of a Torque `WaterBlock`.
@@ -22,11 +71,16 @@ export interface WaterSettings {
     readonly waveMagnitude: number;
     /** How far the second texture layer drifts compared to the first (`SurfaceParallax`). */
     readonly parallax: number;
+    /**
+     * Alpha by depth over the water area (`UseDepthMask`), or `null` to use `opacity` everywhere.
+     * With a map, `opacity` is ignored, as in the engine.
+     */
+    readonly depthMap: THREE.Texture | null;
 }
 
 /**
  * The surface of a Torque water block: two drifting layers of the surface texture over a gentle wave
- * (`fluidRender.cc`, legacy path used when `UseDepthMask` is 0).
+ * (`fluidRender.cc`). With a depth map, shallow water fades out toward the shore.
  */
 export class WaterSurface implements IUpdatable {
     readonly object: THREE.Mesh;
@@ -54,7 +108,11 @@ export class WaterSurface implements IUpdatable {
                 opacity: { value: settings.opacity },
                 parallax: { value: settings.parallax },
                 textureMeters: { value: TEXTURE_METERS },
+                depthMap: { value: settings.depthMap },
+                areaMin: { value: settings.min },
+                areaSize: { value: settings.size },
             },
+            defines: settings.depthMap ? { USE_DEPTH_MAP: '' } : {},
             vertexShader: /* glsl */ `
                 #include <fog_pars_vertex>
                 uniform float time;
@@ -78,8 +136,17 @@ export class WaterSurface implements IUpdatable {
                 uniform float opacity;
                 uniform float parallax;
                 uniform float textureMeters;
+                uniform sampler2D depthMap;
+                uniform vec2 areaMin;
+                uniform vec2 areaSize;
                 varying vec2 vWorldXY;
                 void main() {
+                    #ifdef USE_DEPTH_MAP
+                        // The depth map path draws both layers at full opacity, faded by the map.
+                        float layerAlpha = texture2D(depthMap, (vWorldXY - 1024.0 - areaMin) / areaSize).r;
+                    #else
+                        float layerAlpha = opacity;
+                    #endif
                     vec2 drift = vec2(time * 0.02, 0.03 * cos(6.2831853 * time / 8.0));
                     vec2 uv = vWorldXY / textureMeters;
                     vec4 a = texture2D(map, uv + drift);
@@ -88,9 +155,9 @@ export class WaterSurface implements IUpdatable {
                     float s = 0.5;
                     vec2 uv2 = mat2(c, s, -s, c) * uv + drift * parallax;
                     vec4 b = texture2D(map, uv2);
-                    // Two passes blended over the scene, each with the surface opacity.
-                    vec3 color = mix(a.rgb, b.rgb, 1.0 / (2.0 - opacity));
-                    float alpha = 1.0 - (1.0 - opacity) * (1.0 - opacity);
+                    // Two passes blended over the scene, each with the layer alpha.
+                    vec3 color = mix(a.rgb, b.rgb, 1.0 / (2.0 - layerAlpha));
+                    float alpha = 1.0 - (1.0 - layerAlpha) * (1.0 - layerAlpha);
                     gl_FragColor = vec4(color, alpha);
                     #include <fog_fragment>
                 }
