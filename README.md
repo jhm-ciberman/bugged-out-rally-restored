@@ -75,7 +75,6 @@ Shortcuts for development. They can be combined.
 - **8 bugs**, unlocked with race winnings: Beetle, Ladybug, Cockroach, Grasshopper, Hornet, Praying Mantis, Scorpion and BlackWidow.
 - **3 events**: Explore (no opponents), Single Event (3 bots) and Race Circuit (5 bots).
 - Zinger rockets, Magno bombs, boost pads, hazards (frogs, boulders, water), player profiles and the original menus.
-- It is the full version: the demo limits of the original are not ported.
 
 Profiles and settings are saved in the browser.
 

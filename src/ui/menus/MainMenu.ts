@@ -12,7 +12,7 @@ export interface MainMenuActions {
 
 /**
  * The main menu (`startMenuGui.gui`): Start, About, Options and Quit on the bottom bar.
- * The "Get more games" button and the demo badge of the original are left out.
+ * The "Get more games" button of the original is left out.
  */
 export class MainMenu extends MenuScreen {
     constructor(actions: MainMenuActions) {

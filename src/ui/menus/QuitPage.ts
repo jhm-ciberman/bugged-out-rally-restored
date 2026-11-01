@@ -4,7 +4,7 @@ import { MenuScreen, rel } from './MenuScreen';
 const MORE_GAMES_URL = 'https://www.winterwolves.com/';
 
 /**
- * The page shown when leaving from the main menu (`advpagePromo` in demoPromo.gui): the publisher's other
+ * The page shown when leaving from the main menu (`advpagePromo`): the publisher's other
  * games, a button to their site and Quit.
  */
 export class QuitPage extends MenuScreen {
