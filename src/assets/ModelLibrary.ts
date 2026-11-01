@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { textureAnisotropy } from '../game/Settings';
 import { useTorqueFog } from '../render/TorqueFog';
 import { assetUrl, hasAsset } from './AssetPaths';
@@ -43,7 +44,9 @@ export class ModelLibrary {
             this._cache.set(url, pending);
         }
         const template = await pending;
-        return template ? template.clone(true) : null;
+        if (!template) return null;
+        // A plain clone would keep skinning the template's bones.
+        return template.userData.skinned ? SkeletonUtils.clone(template) : template.clone(true);
     }
 
     private async _load(url: string): Promise<THREE.Object3D | null> {
@@ -56,6 +59,7 @@ export class ModelLibrary {
             root.getObjectByName('ZtoY')?.quaternion.identity();
             root.traverse((obj) => {
                 if (obj instanceof THREE.Mesh) prepareMesh(obj);
+                if (obj instanceof THREE.SkinnedMesh) root.userData.skinned = true;
             });
             root.updateMatrixWorld(true);
             return root;
