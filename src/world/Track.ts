@@ -13,6 +13,7 @@ import { parseColor, parseNumbers, parseRotation, parseVector } from '../torque/
 import { PhysicalZoneVolume } from './PhysicalZoneVolume';
 import { ShapeThread } from './ShapeThread';
 import { SkyBox } from './SkyBox';
+import { SunFlare } from './SunFlare';
 import { TerrainHeightfield } from './TerrainHeightfield';
 import { bakeTerrainLightmap } from './TerrainLightmap';
 import { createTerrainObject } from './TerrainRenderer';
@@ -46,6 +47,8 @@ export class Track implements IUpdatable {
         /** Pickups placed in the mission (`Item` objects), with their models. */
         readonly items: readonly THREE.Object3D[],
         private readonly _threads: ReadonlyMap<MissionObject, ShapeThread>,
+        private readonly _flares: readonly SunFlare[],
+        private readonly _camera: THREE.Camera,
     ) {}
 
     /**
@@ -138,6 +141,12 @@ export class Track implements IUpdatable {
             };
         }
 
+        // Drawn just inside the visible distance, like the engine (`AnimateSun`).
+        const flares = objects
+            .filter((o) => o.className === 'fxSunLight')
+            .map((o) => new SunFlare(o, toSun, visibleDistance * 0.999, collision));
+        for (const flare of flares) root.add(flare.object);
+
         return new Track(
             number,
             objects,
@@ -150,6 +159,8 @@ export class Track implements IUpdatable {
             spinners,
             items,
             threads,
+            flares,
+            camera,
         );
     }
 
@@ -171,6 +182,7 @@ export class Track implements IUpdatable {
         const angle = -(this._time / ITEM_SPIN_SECONDS) * Math.PI * 2;
         for (const s of this._spinners) s.quaternion.setFromAxisAngle(Z_AXIS, angle);
         for (const thread of this._threads.values()) thread.update(deltaSeconds);
+        for (const flare of this._flares) flare.update(deltaSeconds, this._camera);
     }
 
     /**
