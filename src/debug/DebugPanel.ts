@@ -41,6 +41,7 @@ export class DebugPanel {
         hud: true,
     };
     private readonly _viewLabel = document.createElement('div');
+    private readonly _flyBox = document.createElement('input');
     private _frames = 0;
     private _lastFpsTime = performance.now();
 
@@ -81,6 +82,17 @@ export class DebugPanel {
             label.append(box, ` ${LABELS[key]}`);
             this._element.append(label);
         }
+        // The fly camera lives in the game, so the box mirrors it (a race starting or ending changes it too).
+        const flyLabel = document.createElement('label');
+        flyLabel.style.display = 'block';
+        flyLabel.style.cursor = 'pointer';
+        this._flyBox.type = 'checkbox';
+        this._flyBox.addEventListener('change', () => {
+            _game.flying = this._flyBox.checked;
+        });
+        flyLabel.append(this._flyBox, ' Fly camera (WASD, Q/E, Shift)');
+        this._element.append(flyLabel);
+
         const slider = document.createElement('input');
         slider.type = 'range';
         slider.min = '0.5';
@@ -114,6 +126,7 @@ export class DebugPanel {
         const particles = this._game.session?.combat.particles.object;
         if (particles) particles.visible = f.particles;
         for (const hud of document.querySelectorAll<HTMLElement>('.hud')) hud.style.visibility = f.hud ? '' : 'hidden';
+        this._flyBox.checked = this._game.flying;
         const scale = this._game.viewDistanceScale;
         const meters = this._game.track ? ` (${Math.round(this._game.track.visibleDistance * scale)} m)` : '';
         this._viewLabel.textContent = `View distance ${scale}x${meters}`;

@@ -230,9 +230,9 @@ export class App {
     private _closeDialog(): void {
         this._dialog?.dispose();
         this._dialog = null;
-        // The scoreboard keeps the race keys off after the finish.
+        // The scoreboard and the debug fly camera keep the race keys off.
         const session = this._game.session;
-        if (session && session.playerRacer.finishTime === null) session.inputEnabled = true;
+        if (session && session.playerRacer.finishTime === null && !session.freeCamera) session.inputEnabled = true;
     }
 
     private _ingameMenu(): void {

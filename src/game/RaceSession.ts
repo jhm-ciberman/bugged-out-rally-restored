@@ -170,6 +170,9 @@ export class RaceSession implements IUpdatable {
         this._input.enabled = enabled;
     }
 
+    /** When set, the race leaves the camera alone (for a debug fly camera). */
+    freeCamera = false;
+
     /** Whether the player picked the first person view. */
     get firstPerson(): boolean {
         return this._input.firstPerson;
@@ -235,6 +238,7 @@ export class RaceSession implements IUpdatable {
         }
         this.combat.update(deltaSeconds, alpha);
         this.hazards.update();
+        if (this.freeCamera) return;
         this._chase.update(
             this.player.vehicle,
             this.player.renderPosition,

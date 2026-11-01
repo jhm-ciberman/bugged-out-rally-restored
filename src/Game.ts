@@ -164,6 +164,43 @@ export class Game {
         this._entities.push(fly);
     }
 
+    /** Whether the free debug camera is on. */
+    get flying(): boolean {
+        return this._fly !== null;
+    }
+
+    /**
+     * Turns the free debug camera on or off. In a race the cars keep going, the player's keys move the camera
+     * instead of the car, and turning it off gives the camera back to the race.
+     */
+    set flying(on: boolean) {
+        if (on === this.flying || !this._track) return;
+        const session = this._session;
+        if (on) {
+            const fly = new FlyCamera(this._camera, this._renderer.domElement);
+            const ahead = new THREE.Vector3(0, 0, -1)
+                .applyQuaternion(this._camera.quaternion)
+                .add(this._camera.position);
+            fly.lookFrom(this._camera.position.clone(), ahead);
+            this._fly = fly;
+            this._entities.push(fly);
+            if (session) {
+                session.freeCamera = true;
+                session.inputEnabled = false;
+            }
+        } else {
+            const fly = this._fly;
+            if (!fly) return;
+            fly.dispose();
+            this._entities = this._entities.filter((e) => e !== fly);
+            this._fly = null;
+            if (session) {
+                session.freeCamera = false;
+                session.inputEnabled = session.playerRacer.finishTime === null;
+            }
+        }
+    }
+
     /**
      * Stops the race or free camera and frees the track. Safe to call when nothing runs.
      */
