@@ -15,7 +15,7 @@ export class AboutPage extends MenuScreen {
             const el = this.marginText('', { font: arialFont(16), color: ORANGE }, rect, 5, 95);
             el.innerHTML = content;
         };
-        const b = (text: string, size = 16) => `<b style="font-size:${size}px">${text}</b>`;
+        const b = (text: string, size = 16) => `<b style="font:${arialFont(size, true)}">${text}</b>`;
         const link = (url: string, text: string) =>
             `<a href="https://${url}" target="_blank" rel="noopener" style="color:${LINK}">${b(text)}</a>`;
         html(
