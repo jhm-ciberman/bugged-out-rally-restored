@@ -12,6 +12,7 @@ interface DebugFlags {
     sky: boolean;
     water: boolean;
     sunFlares: boolean;
+    shadows: boolean;
     particles: boolean;
     hud: boolean;
 }
@@ -21,6 +22,7 @@ const LABELS: Record<keyof DebugFlags, string> = {
     sky: 'Sky',
     water: 'Water',
     sunFlares: 'Sun flares',
+    shadows: 'Car shadows',
     particles: 'Particles',
     hud: 'HUD',
 };
@@ -37,6 +39,7 @@ export class DebugPanel {
         sky: true,
         water: true,
         sunFlares: true,
+        shadows: true,
         particles: true,
         hud: true,
     };
@@ -118,6 +121,8 @@ export class DebugPanel {
     private readonly _apply = (): void => {
         const f = this._flags;
         torqueFogUniforms.torqueFogEnabled.value = f.fog ? 1 : 0;
+        const shadows = this._game.scene.getObjectByName('CarShadows');
+        if (shadows) shadows.visible = f.shadows;
         this._game.track?.root.traverse((obj) => {
             if (obj.name === 'Sky') obj.visible = f.sky;
             else if (obj.name === 'Water') obj.visible = f.water;

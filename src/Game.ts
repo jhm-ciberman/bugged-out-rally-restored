@@ -92,6 +92,11 @@ export class Game {
         return this._session;
     }
 
+    /** Everything drawn in the 3D view. */
+    get scene(): THREE.Scene {
+        return this._scene;
+    }
+
     /** The loaded track, or `null`. */
     get track(): Track | null {
         return this._track;
