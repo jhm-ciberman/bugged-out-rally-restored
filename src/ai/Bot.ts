@@ -1,19 +1,48 @@
 import * as THREE from 'three';
 import type { Car } from '../game/Car';
 import type { Racer } from '../game/Race';
-import type { CollisionWorld } from '../physics/CollisionWorld';
 import { parseVector } from '../torque/TorqueMath';
 import type { VehicleMove } from '../vehicle/WheeledVehicle';
 import type { Track } from '../world/Track';
 import { Autopilot } from './Autopilot';
 
-/** Seconds between line-of-sight checks (native AI think rate). */
-const LOS_CHECK_SECONDS = 0.5;
-/** Seconds between shots while a target is in sight (`singleShot` reschedules itself). */
+/** Seconds between target scans (`getMoveList` runs the scan every 500 ms). */
+const SCAN_SECONDS = 0.5;
+/** Seconds between shots while a target stays in view (`singleShot` reschedules itself). */
 const SHOT_SECONDS = 1;
-/** Reach and cone of the line-of-sight test. Not decoded from the exe; chosen to match the homing cone. */
-const LOS_RANGE = 300;
-const LOS_CONE = 0.7;
+/** Cosine of the half angle of the cone ahead, and the ranges ahead and behind, in meters (exe, 0x4ca620). */
+const AHEAD_CONE = 0.7;
+const AHEAD_MIN = 1;
+const AHEAD_RANGE = 500;
+const BEHIND_RANGE = 1000;
+
+const _forward = new THREE.Vector3();
+const _to = new THREE.Vector3();
+
+/**
+ * Whether a bot at `position`, facing `forward` (normalized), sees a target ahead or behind (`scanTargets` in the
+ * exe). There is no line of sight test: ahead is a 3D cone within 500 m, behind is the whole rear half within
+ * 1000 m. The scan stops at the first target ahead, so targets after it do not count as behind.
+ */
+export function scanTargets(
+    position: THREE.Vector3,
+    forward: THREE.Vector3,
+    targets: Iterable<THREE.Vector3>,
+): { ahead: boolean; behind: boolean } {
+    let behind = false;
+    for (const target of targets) {
+        _to.subVectors(target, position);
+        const distance = _to.length();
+        if (distance === 0) continue;
+        const dot = forward.dot(_to.divideScalar(distance));
+        if (dot >= AHEAD_CONE) {
+            if (distance >= AHEAD_MIN && distance <= AHEAD_RANGE) return { ahead: true, behind };
+        } else if (dot < 0 && distance < BEHIND_RANGE) {
+            behind = true;
+        }
+    }
+    return { ahead: false, behind };
+}
 
 /**
  * A computer driver (`AIClientVeh` in aiclientveh.cs): drives Path1 then Path3 marker by marker, forever,
@@ -28,9 +57,9 @@ export class Bot {
     private _markPath = 0;
     private _markNode = 0;
 
-    private _losTimer = 0;
-    private _ahead: Car | null = null;
-    private _behind: Car | null = null;
+    private _scanTimer = SCAN_SECONDS;
+    private _ahead = false;
+    private _behind = false;
     private _shotTimer = 0;
     private _behindShotTimer = 0;
 
@@ -71,46 +100,46 @@ export class Bot {
 
     /**
      * Decides whether to shoot this tick (`onTargetEnterLOS` / `singleShot` / `behindShot` in aiclientveh.cs):
-     * a Zinger every second while a car is in sight ahead, a Magno bomb every second while one is behind.
-     *
-     * The line-of-sight test is native code; this one looks for a car within a 45 degree cone and 300 m,
-     * with nothing solid in between, twice a second.
+     * a Zinger as soon as a car comes into view ahead and then every second while one stays there, and a Magno
+     * bomb the same way for cars behind.
      */
-    triggers(dt: number, cars: readonly Car[], world: CollisionWorld): { fire: boolean; drop: boolean } {
-        this._losTimer -= dt;
-        if (this._losTimer <= 0) {
-            this._losTimer = LOS_CHECK_SECONDS;
-            this._ahead = this._findInSight(cars, world, 1);
-            this._behind = this._findInSight(cars, world, -1);
-        }
+    triggers(dt: number, cars: readonly Car[]): { fire: boolean; drop: boolean } {
         let fire = false;
         let drop = false;
-        this._shotTimer -= dt;
-        this._behindShotTimer -= dt;
-        if (this._ahead && this._shotTimer <= 0) {
-            fire = true;
-            this._shotTimer = SHOT_SECONDS;
+        this._scanTimer -= dt;
+        if (this._scanTimer <= 0) {
+            this._scanTimer += SCAN_SECONDS;
+            const rigid = this.car.vehicle.rigid;
+            _forward.set(0, 1, 0).applyQuaternion(rigid.angPosition);
+            const targets = cars.filter((c) => c !== this.car && c.respawnTimer <= 0).map((c) => c.renderPosition);
+            const seen = scanTargets(rigid.linPosition, _forward, targets);
+            // The script shoots on the edge and reschedules itself; leaving the view cancels it.
+            if (seen.ahead && !this._ahead) {
+                fire = true;
+                this._shotTimer = SHOT_SECONDS;
+            }
+            if (seen.behind && !this._behind) {
+                drop = true;
+                this._behindShotTimer = SHOT_SECONDS;
+            }
+            this._ahead = seen.ahead;
+            this._behind = seen.behind;
         }
-        if (this._behind && this._behindShotTimer <= 0) {
-            drop = true;
-            this._behindShotTimer = SHOT_SECONDS;
+        if (this._ahead) {
+            this._shotTimer -= dt;
+            if (this._shotTimer <= 0 && !fire) {
+                fire = true;
+                this._shotTimer += SHOT_SECONDS;
+            }
+        }
+        if (this._behind) {
+            this._behindShotTimer -= dt;
+            if (this._behindShotTimer <= 0 && !drop) {
+                drop = true;
+                this._behindShotTimer += SHOT_SECONDS;
+            }
         }
         return { fire, drop };
-    }
-
-    private _findInSight(cars: readonly Car[], world: CollisionWorld, side: 1 | -1): Car | null {
-        const rigid = this.car.vehicle.rigid;
-        const forward = new THREE.Vector3(0, 1, 0).applyQuaternion(rigid.angPosition).multiplyScalar(side);
-        const eye = rigid.worldCenterOfMass;
-        for (const other of cars) {
-            if (other === this.car || other.respawnTimer > 0) continue;
-            const to = other.vehicle.rigid.worldCenterOfMass.clone().sub(eye);
-            const distance = to.length();
-            if (distance > LOS_RANGE || distance < 1) continue;
-            if (forward.dot(to.divideScalar(distance)) < LOS_CONE) continue;
-            if (!world.castRay(eye, other.vehicle.rigid.worldCenterOfMass)) return other;
-        }
-        return null;
     }
 
     /**

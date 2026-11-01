@@ -483,8 +483,7 @@ export class RaceSession implements IUpdatable {
         // Weapons work before the green light too; only the throttle waits for it.
         const triggers = new Map<Car, Triggers>([[this.player, this._input.triggers()]]);
         if (racing) {
-            for (const bot of this.bots)
-                triggers.set(bot.car, bot.triggers(TICK_SECONDS, this.cars, this.track.collision));
+            for (const bot of this.bots) triggers.set(bot.car, bot.triggers(TICK_SECONDS, this.cars));
         }
         this.combat.tick(TICK_SECONDS, this.cars, triggers);
         this.hazards.tick(TICK_SECONDS, this.cars);
