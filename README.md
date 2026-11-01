@@ -1,19 +1,72 @@
 # Bugged Out Rally, Restored
 
-A browser port of **Bugged Out Rally** (Inoculous Games, 2004), a combat racing game where you drive bugs with wheels. The original ran on the Torque Game Engine and has been abandonware for years. This port rebuilds it with three.js and TypeScript, keeping the original assets and rules.
+A browser port of **Bugged Out Rally** (Inoculous Games, 2004), a combat racing game where you drive bugs on wheels. Built with three.js and TypeScript, using the original assets and rules.
 
-## Play
+![Screenshot of Bugged Out Rally, Restored](./art/bugged-out-rally-screenshot.jpg)
+
+## 👨‍💻 Development
+
+1. Clone the repository and install the dependencies:
 
 ```bash
+git clone git@github.com:jhm-ciberman/bugged-out-rally-restored.git
+cd bugged-out-rally-restored
 npm ci
+```
+
+2. Start the development server:
+
+```bash
 npm run dev
 ```
 
-Then open the URL Vite prints. Needs Node 20.19+ or 22.12+.
+Then open [http://localhost:5173](http://localhost:5173) in your browser.
 
-For a production build, `npm run build` writes a static site to `dist/`. Any static web server can host it.
+- [three.js](https://threejs.org/) for the 3D rendering
+- [three-mesh-bvh](https://github.com/gkjohnson/three-mesh-bvh) for the collision ray casts
+- [TypeScript](https://www.typescriptlang.org/) and [Vite](https://vite.dev/)
+- Node 20.19+ or 22.12+
 
-## What's in it
+To build the static site into `dist/`:
+
+```bash
+npm run build
+```
+
+## 🧹 Code Style
+
+```bash
+npm run lint
+```
+
+Code style is checked and fixed with [Biome](https://biomejs.dev/).
+
+## 🧪 Testing
+
+```bash
+npm test
+```
+
+Tests use [Vitest](https://vitest.dev/) as the testing framework.
+
+## 🔗 URL Parameters
+
+Shortcuts for development. They can be combined.
+
+| Parameter | Description |
+|-----------|-------------|
+| `?track=N` | Skips the menus and starts a race on track `N` (1 to 8) |
+| `&event=single` | The event for `?track`: `single` (3 bots), `circuit` (5 bots) or `explore` (no bots). Default `single` |
+| `&car=Cockroach` | The bug for `?track`, by its datablock name. Default `Cockroach` |
+| `&winnings=N` | The player's winnings for `?track`, which pick the opponents' bugs. Default `0` |
+| `?fly` | Loads the track with a free camera instead of a race |
+| `?cam=x,y,z&look=x,y,z` | Puts the free camera at a position, looking at a point |
+| `?mute` | Starts with the sound off |
+| `?debug` | Shows the debug panel (also F2) |
+| `?nofog` | Starts with the fog off |
+| `?view=N` | Draws `N` times as far as the original |
+
+## 🎮 The Game
 
 - **8 tracks**: Croaky Pond, Turtle Creek, Twin Peaks, Boomerang II, Snowbound, Ocean Side, Dunes II and Lunar.
 - **8 bugs**, unlocked with race winnings: Beetle, Ladybug, Cockroach, Grasshopper, Hornet, Praying Mantis, Scorpion and BlackWidow.
@@ -23,10 +76,10 @@ For a production build, `npm run build` writes a static site to `dist/`. Any sta
 
 Profiles and settings are saved in the browser.
 
-## Controls
+## 🕹️ Controls
 
 | Key | Action |
-|---|---|
+|-----|--------|
 | Arrow keys, or W and S plus the mouse | Drive and steer |
 | Space | Brake |
 | A or left mouse button | Fire a Zinger |
@@ -40,7 +93,7 @@ Profiles and settings are saved in the browser.
 
 Keys can be remapped in Options, Controls.
 
-## How it was restored
+## 🔧 How It Was Restored
 
 The goal is to play like the original, not like a remake. Every value was taken from the original files where possible, and the result was checked side by side against the original game.
 
@@ -51,12 +104,7 @@ The goal is to play like the original, not like a remake. Every value was taken 
 
 Some original bugs that broke a feature by accident were fixed. Ones that are part of how the game plays were kept.
 
-## Development
-
-- `npm run dev` starts the game. A few URL flags help: `?track=N` (1 to 8) goes straight into a race, with `&event=single|circuit|explore` and `&car=Cockroach`. `?fly` loads a track with a free camera, `?mute` starts muted, and `?debug` (or F2) shows a debug panel.
-- `npm test` runs the tests. `npm run lint` formats and checks the code.
-
-## Credits
+## 🙏 Credits
 
 Bugged Out Rally was made by **Inoculous Games**:
 
@@ -65,8 +113,10 @@ Bugged Out Rally was made by **Inoculous Games**:
 
 The original game was powered by the Torque Game Engine by GarageGames.
 
-All game assets (models, textures, sounds and music) belong to their original authors. This project only restores the game so it can still be played.
+## 🔒 License
 
-## Rights holders
+All game assets (models, textures, sounds and music) belong to their original authors.
 
-If you hold the rights to Bugged Out Rally and want this removed, please open an issue and it will be taken down.
+It is not my intention to break anyone's copyright in any way. I played Bugged Out Rally as a child and loved it, and this project exists only to preserve it so future generations can still play it.
+
+If you hold the rights to Bugged Out Rally and want this removed, please open an issue and it will be taken down as soon as possible.
