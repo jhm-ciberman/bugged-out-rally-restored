@@ -184,7 +184,7 @@ export class RaceSession implements IUpdatable {
     }
 
     /**
-     * Sets up a race: the player on the first grid spot and the bots on the next ones.
+     * Sets up a race: the bots on the first grid spots and the player on the one after them.
      */
     static async create(setup: RaceSetup): Promise<RaceSession> {
         const { track, models, audio } = setup;
@@ -193,7 +193,10 @@ export class RaceSession implements IUpdatable {
             const spot = spots[i] ?? spots[0];
             return [parseVector(spot?.fields.get('position')), parseRotation(spot?.fields.get('rotation'))] as const;
         };
-        const player = await Car.create(setup.carName, track, models, ...at(0), audio);
+        const roster = botRoster(setup.event, setup.winnings);
+        // Each car takes the next spot in the order the cars enter the race (`GameConnection::spawnPlayer`), and
+        // the bots enter before the player (in the original, with three bots the player starts on the fourth spot).
+        const player = await Car.create(setup.carName, track, models, ...at(roster.length), audio);
         const session = new RaceSession(
             track,
             player,
@@ -203,8 +206,7 @@ export class RaceSession implements IUpdatable {
             setup.events ?? {},
         );
 
-        const roster = botRoster(setup.event, setup.winnings);
-        const cars = await Promise.all(roster.map((b, i) => Car.create(b.car, track, models, ...at(i + 1), audio)));
+        const cars = await Promise.all(roster.map((b, i) => Car.create(b.car, track, models, ...at(i), audio)));
         roster.forEach((entry, i) => {
             const car = cars[i];
             const racer = session.race.addRacer(entry.name, car.vehicle);
