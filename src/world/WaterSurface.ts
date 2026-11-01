@@ -199,8 +199,9 @@ export class WaterSurface {
                     world.z = surfaceZ + (sin(0.05 * local.x + time) + sin(0.05 * local.y + time)) * waveFactor;
                     vWorldXY = local;
                     vWorldPos = world.xyz;
-                    // The fog code expects the local position in "transformed"; the model matrix only moves.
-                    vec3 transformed = world.xyz - modelMatrix[3].xyz;
+                    // The fog code expects the local position in "transformed". The surface is also scaled with
+                    // the view distance, so the whole model matrix is undone, not just its offset.
+                    vec3 transformed = (inverse(modelMatrix) * world).xyz;
                     vec4 mvPosition = viewMatrix * world;
                     gl_Position = projectionMatrix * mvPosition;
                     #include <fog_vertex>
