@@ -1,3 +1,5 @@
+import type { Action } from '../input/KeyBindings';
+
 const STORAGE_KEY = 'bor.settings';
 
 /**
@@ -16,6 +18,8 @@ export interface Settings {
     textureDetail: number;
     /** Opens every bug and track, whatever the player's winnings. */
     unlockAll: boolean;
+    /** Bindings changed on the controls menu; `null` clears one. Actions not listed keep their default. */
+    keyBindings: Partial<Record<Action, string | null>>;
 }
 
 /**
@@ -29,6 +33,7 @@ const DEFAULTS: Settings = {
     renderQuality: 'high',
     textureDetail: 0,
     unlockAll: false,
+    keyBindings: {},
 };
 
 /** Share of the screen's pixel ratio (at most 2) each render quality draws at. */

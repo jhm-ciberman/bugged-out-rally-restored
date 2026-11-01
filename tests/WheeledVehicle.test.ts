@@ -90,4 +90,15 @@ describe('WheeledVehicle', () => {
         expect(sink).toBeLessThan(17);
         expect(sink).toBeGreaterThan(8);
     });
+
+    it('puts the center of its box where the body is, even upside down', () => {
+        // The Hornet's box is off its origin, so the rotation matters.
+        const car = new WheeledVehicle(getVehicleData('Hornet'), flatWorld());
+        const upsideDown = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
+        car.setTransform(new THREE.Vector3(0, 0, 110), upsideDown);
+        const local = car.data.bounds.getCenter(new THREE.Vector3());
+        const expected = local.clone().applyQuaternion(upsideDown).add(car.rigid.linPosition);
+        expect(local.z).not.toBe(0);
+        expect(car.boxCenter(new THREE.Vector3()).distanceTo(expected)).toBeLessThan(1e-6);
+    });
 });

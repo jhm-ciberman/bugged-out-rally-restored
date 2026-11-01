@@ -7,6 +7,7 @@ import { loadProfiles, newProfile, type Profile, recordResult } from './game/Pro
 import type { FinishChoice } from './ui/FinishScreen';
 import { buttonSounds } from './ui/GuiControls';
 import { AboutPage } from './ui/menus/AboutPage';
+import { ControlMenu } from './ui/menus/ControlMenu';
 import { IngameMenu } from './ui/menus/IngameMenu';
 import { LoadingScreen } from './ui/menus/LoadingScreen';
 import { MainMenu } from './ui/menus/MainMenu';
@@ -120,14 +121,18 @@ export class App {
         );
     }
 
-    private _options(): void {
+    /**
+     * Opens the options; Back runs `onBack`, which closes them unless given.
+     */
+    private _options(onBack: () => void = () => this._closeDialog()): void {
         this._openDialog(
             new OptionsMenu(
-                () => this._closeDialog(),
+                onBack,
                 () => {
                     this._game.audio.applySettings();
                     this._game.applySettings();
                 },
+                () => this._openDialog(new ControlMenu(() => this._options(onBack))),
             ),
         );
     }
@@ -218,12 +223,16 @@ export class App {
     private _openDialog(dialog: MenuScreen): void {
         this._closeDialog();
         this._dialog = dialog;
+        if (this._game.session) this._game.session.inputEnabled = false;
         dialog.show(this._ui);
     }
 
     private _closeDialog(): void {
         this._dialog?.dispose();
         this._dialog = null;
+        // The scoreboard keeps the race keys off after the finish.
+        const session = this._game.session;
+        if (session && session.playerRacer.finishTime === null) session.inputEnabled = true;
     }
 
     private _ingameMenu(): void {
@@ -234,7 +243,7 @@ export class App {
             new IngameMenu(plan.track, {
                 cancel: () => this._closeDialog(),
                 launch: (track) => this._restart(track),
-                options: () => this._options(),
+                options: () => this._options(() => this._ingameMenu()),
                 quit: () => this.mainMenu(),
                 canRace: (track) => isTrackUnlocked(plan.profile, plan.event, track - 1),
             }),

@@ -1,10 +1,11 @@
 import { getSettings } from '../game/Settings';
 import type { VehicleMove } from '../vehicle/WheeledVehicle';
+import { type Action, actionOf, bindingOf } from './KeyBindings';
 
 /** Key that puts the car back at the last checkpoint. */
 const RESET_KEY = 'Enter';
 
-/** Steering change per tick while an arrow key is held (`$pref::Input::KeyboardTurnSpeed`). */
+/** Steering change per tick while a turn key is held (`$pref::Input::KeyboardTurnSpeed`). */
 const KEYBOARD_TURN_SPEED = 0.1;
 /** Steering change per pixel of mouse movement at a 90 degree field of view (`getMouseAdjustAmount`). */
 const MOUSE_TURN_PER_PIXEL = 0.01;
@@ -12,25 +13,30 @@ const MOUSE_TURN_PER_PIXEL = 0.01;
 export const DEFAULT_FOV = 90;
 const ZOOM_FOV = 45;
 
+/** Torque's number for each browser mouse button (`MouseEvent.button`): left, middle, right. */
+const MOUSE_BUTTONS = ['Mouse0', 'Mouse2', 'Mouse1'];
+
 /**
- * Turns keyboard and mouse input into vehicle moves, with the original bindings (`config.cs`):
- * W/Up drive, S/Down reverse, Space brakes, the mouse or Left/Right steer, E zooms while held and Tab
- * switches between the chase and first person views.
+ * Turns keyboard and mouse input into vehicle moves, with the bindings of the controls menu. The mouse
+ * always steers, Enter puts the car back on the track.
  *
  * Steering is relative: the mouse and keys turn the wheel, and the vehicle lets it return to center.
  */
 export class VehicleInput {
-    /**
-     * Mouse sensitivity multiplier (`$pref::Input::LinkMouseSensitivity`, 0.2 to 1 in the options menu).
-     * Set it with `?mouse=` in the URL.
-     */
-    sensitivity = mouseSensitivityFromUrl() ?? getSettings().mouseSensitivity;
-    private readonly _keys = new Set<string>();
+    /** Keys and mouse buttons held down, as stored in the bindings. */
+    private readonly _held = new Set<string>();
     private _mouseYaw = 0;
     private _resetRequested = false;
-    private _rightMouse = false;
-    private _leftMouse = false;
     private _firstPerson = false;
+    private _enabled = true;
+
+    /**
+     * Mouse sensitivity multiplier (`$pref::Input::LinkMouseSensitivity`, 0.2 to 1 in the options menu).
+     * `?mouse=` in the URL overrides it.
+     */
+    get sensitivity(): number {
+        return mouseSensitivityFromUrl() ?? getSettings().mouseSensitivity;
+    }
 
     constructor(private readonly _element: HTMLElement) {
         _element.addEventListener('click', this._onClick);
@@ -44,6 +50,19 @@ export class VehicleInput {
         document.addEventListener('pointerlockchange', this._onBlur);
     }
 
+    /** Whether input reaches the car. While off, keys and buttons are ignored and none count as held. */
+    get enabled(): boolean {
+        return this._enabled;
+    }
+
+    set enabled(enabled: boolean) {
+        this._enabled = enabled;
+        if (!enabled) {
+            this._held.clear();
+            this._mouseYaw = 0;
+        }
+    }
+
     /** Whether the player picked the first person view (`$firstPerson`). */
     get firstPerson(): boolean {
         return this._firstPerson;
@@ -51,35 +70,35 @@ export class VehicleInput {
 
     /** Horizontal field of view, in degrees, for the zoom key's state. */
     get fov(): number {
-        return this._keys.has('KeyE') ? ZOOM_FOV : DEFAULT_FOV;
+        return this._isHeld('zoom') ? ZOOM_FOV : DEFAULT_FOV;
     }
 
     /**
      * Returns the move for the next tick and clears the mouse movement collected so far.
      */
     nextMove(): VehicleMove {
-        const forward = this._keys.has('KeyW') || this._keys.has('ArrowUp') ? 1 : 0;
-        const backward = this._keys.has('KeyS') || this._keys.has('ArrowDown') ? 1 : 0;
-        const right = this._keys.has('ArrowRight') ? KEYBOARD_TURN_SPEED : 0;
-        const left = this._keys.has('ArrowLeft') ? KEYBOARD_TURN_SPEED : 0;
+        const forward = this._isHeld('throttle') || this._isHeld('altThrottle') ? 1 : 0;
+        const backward = this._isHeld('reverse') || this._isHeld('altReverse') ? 1 : 0;
+        const right = this._isHeld('turnRight') ? KEYBOARD_TURN_SPEED : 0;
+        const left = this._isHeld('turnLeft') ? KEYBOARD_TURN_SPEED : 0;
         const move: VehicleMove = {
             throttle: forward - backward,
             yaw: this._mouseYaw + right - left,
-            brake: this._keys.has('Space'),
+            brake: this._isHeld('brake'),
             // The exe jets while the bomb trigger is held (`Vehicle::updateMove`, 0x4bd527).
-            jet: this._keys.has('KeyD') || this._rightMouse,
+            jet: this.triggers().drop,
         };
         this._mouseYaw = 0;
         return move;
     }
 
     /**
-     * Returns the fire buttons: A or left mouse fires a Zinger, D or right mouse drops a Magno bomb (`config.cs`).
+     * Returns the fire buttons: whether a Zinger fire or a Magno bomb drop binding is held.
      */
     triggers(): { fire: boolean; drop: boolean } {
         return {
-            fire: this._keys.has('KeyA') || this._leftMouse,
-            drop: this._keys.has('KeyD') || this._rightMouse,
+            fire: this._isHeld('fire') || this._isHeld('altFire'),
+            drop: this._isHeld('drop') || this._isHeld('altDrop'),
         };
     }
 
@@ -117,36 +136,47 @@ export class VehicleInput {
         e.preventDefault();
     };
 
+    private _isHeld(action: Action): boolean {
+        const input = bindingOf(action);
+        return input !== null && this._held.has(input);
+    }
+
+    // Buttons only count while the mouse is captured, so the click that captures it does not fire.
     private readonly _onMouseButton = (e: MouseEvent): void => {
-        const down = e.type === 'mousedown';
-        if (e.button === 0) this._leftMouse = down && document.pointerLockElement === this._element;
-        if (e.button === 2) this._rightMouse = down;
+        const input = MOUSE_BUTTONS[e.button];
+        if (!input || !this._enabled) return;
+        if (e.type === 'mousedown' && document.pointerLockElement === this._element) this._press(input, false);
+        else this._held.delete(input);
     };
 
     // Keys released while the window is not focused never send keyup; forget them.
     private readonly _onBlur = (): void => {
         if (document.pointerLockElement === this._element && document.hasFocus()) return;
-        this._keys.clear();
-        this._rightMouse = false;
-        this._leftMouse = false;
+        this._held.clear();
     };
 
     private readonly _onMouseMove = (e: MouseEvent): void => {
-        if (document.pointerLockElement !== this._element) return;
+        if (document.pointerLockElement !== this._element || !this._enabled) return;
         // A narrower view turns slower, so the aim moves the same on screen (`getMouseAdjustAmount`).
         this._mouseYaw += e.movementX * MOUSE_TURN_PER_PIXEL * (this.fov / DEFAULT_FOV) * this.sensitivity;
     };
 
     private readonly _onKeyDown = (e: KeyboardEvent): void => {
-        this._keys.add(e.code);
+        if (!this._enabled) return;
         if (e.code === RESET_KEY && !e.repeat) this._resetRequested = true;
-        if (e.code === 'Tab' && !e.repeat) this._firstPerson = !this._firstPerson;
-        if (e.code === 'Space' || e.code === 'Tab' || e.code.startsWith('Arrow')) e.preventDefault();
+        // Bound keys must not scroll the page or move the focus.
+        if (actionOf(e.code)) e.preventDefault();
+        this._press(e.code, e.repeat);
     };
 
     private readonly _onKeyUp = (e: KeyboardEvent): void => {
-        this._keys.delete(e.code);
+        this._held.delete(e.code);
     };
+
+    private _press(input: string, repeat: boolean): void {
+        this._held.add(input);
+        if (!repeat && actionOf(input) === 'firstPerson') this._firstPerson = !this._firstPerson;
+    }
 }
 
 /**

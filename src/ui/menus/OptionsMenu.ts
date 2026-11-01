@@ -19,7 +19,7 @@ const POPUP_STYLE: Partial<CSSStyleDeclaration> = {
  * the Bit Depth menu, and Texture Detail, Full Screen, the volumes and mouse sensitivity keep their place.
  */
 export class OptionsMenu extends MenuScreen {
-    constructor(onBack: () => void, onChange: (settings: Settings) => void) {
+    constructor(onBack: () => void, onChange: (settings: Settings) => void, onControls: () => void) {
         super('optionsselection.jpg');
         const s = getSettings();
         const changed = (changes: Partial<Settings>) => {
@@ -84,6 +84,7 @@ export class OptionsMenu extends MenuScreen {
 
         // The original points at `buttons/back`, which never shipped; `back` is the art it meant.
         this.button('back', rel(69, 525, 95, 29), onBack);
+        this.button('control', rel(325, 525, 94, 29), onControls);
     }
 
     private _popup(rect: ReturnType<typeof rel>, options: string[][], value: string): HTMLSelectElement {

@@ -211,6 +211,13 @@ export class WheeledVehicle {
     }
 
     /**
+     * Writes the world position of the middle of the body's box into `out` and returns it.
+     */
+    boxCenter(out: THREE.Vector3): THREE.Vector3 {
+        return this.data.bounds.getCenter(out).applyQuaternion(this.rigid.angPosition).add(this.rigid.linPosition);
+    }
+
+    /**
      * Measures how deep the body is in water and sets drag and buoyancy (`ShapeBase::updateContainer`).
      */
     private _updateContainer(): void {

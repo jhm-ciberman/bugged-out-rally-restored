@@ -88,6 +88,15 @@ export class RaceSession implements IUpdatable {
         this.playerRacer = this.race.addRacer('Player', player.vehicle);
     }
 
+    /** Whether the player's keys and mouse drive the car. Off while a menu or the scoreboard is up. */
+    get inputEnabled(): boolean {
+        return this._input.enabled;
+    }
+
+    set inputEnabled(enabled: boolean) {
+        this._input.enabled = enabled;
+    }
+
     /** Horizontal field of view the player's camera asks for, in degrees. */
     get cameraFov(): number {
         return this._input.fov;
@@ -184,7 +193,7 @@ export class RaceSession implements IUpdatable {
         car.view.object.visible = false;
         car.obstacle.enabled = false;
         // The car blows up from the middle of its box (`ShapeBase::blowUp`), with a water version under water.
-        const center = car.vehicle.data.bounds.getCenter(new THREE.Vector3()).add(car.vehicle.rigid.linPosition);
+        const center = car.vehicle.boxCenter(new THREE.Vector3());
         const inWater = this.track.collision.isInWater(center);
         this.combat.explode(inWater ? VEHICLE_WATER_EXPLOSION : VEHICLE_EXPLOSION, center);
     }
