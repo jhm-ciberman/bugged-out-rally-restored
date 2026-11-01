@@ -3,7 +3,7 @@ import { firstPrize } from '../../game/Prizes';
 import type { Profile } from '../../game/Profiles';
 import { getSettings } from '../../game/Settings';
 import { TRACK_NAMES } from '../../game/Tracks';
-import { ABOUT_TEXT, MEDIUM_RED_TEXT, MEDIUM_TEXT } from '../GuiControls';
+import { ABOUT_TEXT, MEDIUM_RED_TEXT, MEDIUM_TEXT, setButtonEnabled } from '../GuiControls';
 import { MenuScreen, rel640 } from './MenuScreen';
 import { promptOk } from './PromptOk';
 
@@ -65,6 +65,10 @@ export class VenueSelection extends MenuScreen {
         super('venueselection.jpg');
         this.button('back', rel640(480, 420, 76, 24), () => this._onBack());
         this.button('singleplayer', rel640(48, 420, 128, 24), () => void this._start());
+        // The original also races over the network (`StartOnline`); this port has no network play.
+        const online = this.button('online', rel640(282, 420, 76, 24), () => undefined);
+        setButtonEnabled(online, false, 'online');
+        online.title = 'Online play is not available in this version.';
         this.button('buttons/left', rel640(357, 241, 24, 24), () => this._setTrack(this._track - 1));
         this.button('buttons/right', rel640(552, 241, 24, 24), () => this._setTrack(this._track + 1));
         this._trackPic = this.image('track1.jpg', rel640(369, 63, 195, 163));
