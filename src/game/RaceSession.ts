@@ -68,6 +68,8 @@ export class RaceSession implements IUpdatable {
     private _accumulator = 0;
     private readonly _dustBudget = new Map<Car, number>();
     private _botsStarted = false;
+    /** Looping sounds placed in the mission (`AudioEmitter`). */
+    private readonly _ambient: THREE.PositionalAudio[] = [];
 
     private constructor(
         readonly track: Track,
@@ -135,6 +137,7 @@ export class RaceSession implements IUpdatable {
         });
         // Cars are solid to each other. A wrecked car leaves the list until it comes back.
         for (const car of session.cars) track.collision.obstacles.push(car.obstacle);
+        if (audio) await session._startAmbientSounds(audio);
         return session;
     }
 
@@ -214,8 +217,29 @@ export class RaceSession implements IUpdatable {
         const obstacles = this.track.collision.obstacles;
         for (const car of this.cars) obstacles.splice(obstacles.indexOf(car.obstacle), 1);
         this._input.dispose();
+        for (const sound of this._ambient) if (sound.isPlaying) sound.stop();
         this.combat.dispose();
         for (const car of this.cars) car.dispose();
+    }
+
+    /**
+     * Starts the mission's looping sound emitters (frogs at the pond, dust devils, the sea).
+     */
+    private async _startAmbientSounds(audio: AudioSystem): Promise<void> {
+        for (const obj of this.track.objects) {
+            if (obj.className !== 'AudioEmitter' || obj.fields.get('islooping') === '0') continue;
+            const sound = await audio.loop(obj.fields.get('profile') ?? '');
+            if (!sound) continue;
+            // With useProfileDescription the profile sets the distances; otherwise the emitter does.
+            if (obj.fields.get('useprofiledescription') !== '1') {
+                sound.setRefDistance(Number(obj.fields.get('referencedistance') ?? 1));
+                sound.setVolume(Number(obj.fields.get('volume') ?? 1));
+            }
+            sound.position.copy(parseVector(obj.fields.get('position')));
+            this.combat.object.add(sound);
+            sound.play();
+            this._ambient.push(sound);
+        }
     }
 
     /**
