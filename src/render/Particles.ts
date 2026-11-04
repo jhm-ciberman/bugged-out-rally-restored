@@ -47,6 +47,7 @@ class ParticleBatch {
         this._geometry.setAttribute('position', quad.getAttribute('position'));
         this._geometry.setAttribute('uv', quad.getAttribute('uv'));
         this._grow(INITIAL_CAPACITY);
+        this._geometry.instanceCount = 0;
         const url = resolveTorqueFile(look.texture);
         const map = url ? loader.load(url) : null;
         if (map) map.colorSpace = THREE.NoColorSpace;
@@ -201,6 +202,13 @@ export class Particles {
     readonly object = new THREE.Group();
     private readonly _batches = new Map<ParticleLook, ParticleBatch>();
     private readonly _emitters: Emitter[] = [];
+
+    /**
+     * Starts loading the textures of `looks` now, so their first particles do not wait for them.
+     */
+    preload(looks: readonly ParticleLook[]): void {
+        for (const look of looks) this._batch(look);
+    }
 
     /**
      * Adds one particle at `position` moving at `velocity`.

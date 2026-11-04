@@ -3,7 +3,17 @@ import type { ModelLibrary } from '../assets/ModelLibrary';
 import type { AudioSystem } from '../audio/AudioSystem';
 import type { Car } from '../game/Car';
 import type { CollisionWorld } from '../physics/CollisionWorld';
-import { Particles, ROCKET_BUBBLE, ROCKET_EXHAUST } from '../render/Particles';
+import {
+    EXPLOSION_BUBBLE,
+    EXPLOSION_FIRE,
+    EXPLOSION_SMOKE,
+    EXPLOSION_SPARKS,
+    EXPLOSION_WATER_SPARK,
+    Particles,
+    ROCKET_BUBBLE,
+    ROCKET_EXHAUST,
+    SPIT_SPLAT,
+} from '../render/Particles';
 import type { ExplosionData, ExplosionShake } from './Explosions';
 import { BOMB, Projectile, type ProjectileData, ROCKET } from './Projectile';
 import { WeaponImage } from './WeaponImage';
@@ -97,6 +107,16 @@ export class Combat {
         private readonly _audio: AudioSystem | null,
     ) {
         this.object.add(this.particles.object);
+        this.particles.preload([
+            EXPLOSION_FIRE,
+            EXPLOSION_SMOKE,
+            EXPLOSION_SPARKS,
+            ROCKET_EXHAUST,
+            ROCKET_BUBBLE,
+            EXPLOSION_BUBBLE,
+            EXPLOSION_WATER_SPARK,
+            SPIT_SPLAT,
+        ]);
         for (let i = 0; i < LIGHT_POOL; i++) {
             const light = new THREE.PointLight(0xffffff, 0, 1, 1);
             this.object.add(light);

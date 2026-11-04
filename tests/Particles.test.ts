@@ -17,6 +17,13 @@ describe('Particles', () => {
         expect(particles.count).toBe(25);
     });
 
+    it('loads the looks it is told to preload before any particle uses them', () => {
+        const particles = new Particles();
+        particles.preload([EXPLOSION_FIRE, EXPLOSION_SMOKE]);
+        expect(particles.object.children).toHaveLength(2);
+        expect(particles.count).toBe(0);
+    });
+
     it('draws glowing particles after see-through ones', () => {
         const particles = new Particles();
         particles.burst(EXPLOSION_FIRE, new THREE.Vector3(), 1, 1);
