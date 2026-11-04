@@ -113,6 +113,7 @@ export class RaceHud {
      */
     render(renderer: THREE.WebGLRenderer, camera: THREE.Camera): void {
         const s = this._session;
+        this.hud.setUnderwater(!!s && s.track.collision.isInWater(camera.position));
         if (!s || this._finish) {
             this._targets.hide();
             return;

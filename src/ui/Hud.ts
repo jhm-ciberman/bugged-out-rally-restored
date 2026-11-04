@@ -32,6 +32,8 @@ const PULSE_MS = 1000;
 const PULSE_THRESHOLD = 0.5;
 /** The renderer never draws the damage flash stronger than this (`renderWorld`). */
 const MAX_FLASH_OPACITY = 0.76;
+/** The color laid over the whole screen while the camera is under water, measured from the original. */
+const UNDERWATER_TINT = 'rgba(51, 153, 179, 0.45)';
 
 /**
  * Values shown on the HUD, refreshed every frame.
@@ -69,13 +71,21 @@ export class Hud {
     private readonly _centerText = document.createElement('div');
     /** Red layer over the 3D view after a hit; the HUD controls draw on top of it. */
     private readonly _flash = document.createElement('div');
+    /** Water color over everything, HUD included, while the camera is under water. */
+    private readonly _underwater = document.createElement('div');
     private _centerTimer = 0;
     private _counterTimer = 0;
 
     constructor(parent: HTMLElement) {
         const e = this.element;
         e.className = 'hud';
-        Object.assign(e.style, { position: 'absolute', inset: '0', pointerEvents: 'none', overflow: 'hidden' });
+        Object.assign(e.style, {
+            position: 'absolute',
+            inset: '0',
+            pointerEvents: 'none',
+            overflow: 'hidden',
+            isolation: 'isolate',
+        });
         Object.assign(this._flash.style, {
             position: 'absolute',
             inset: '0',
@@ -147,6 +157,14 @@ export class Hud {
         // Draw the counts above their icons, like the GUI file order (count after icon).
         for (const key of ['zingCount', 'bombCount'] as const) e.append(this._parts.get(key)!);
         e.append(this.chat.element);
+        Object.assign(this._underwater.style, {
+            position: 'absolute',
+            inset: '0',
+            zIndex: '1',
+            background: UNDERWATER_TINT,
+            display: 'none',
+        });
+        e.append(this._underwater);
 
         parent.append(e);
         this.resize(window.innerWidth, window.innerHeight);
@@ -158,6 +176,13 @@ export class Hud {
     resize(width: number, height: number): void {
         for (const [key, el] of this._parts) placeControl(el, RECTS[key], width, height);
         this.chat.resize(width);
+    }
+
+    /**
+     * Shows or hides the water color over the screen.
+     */
+    setUnderwater(underwater: boolean): void {
+        this._underwater.style.display = underwater ? '' : 'none';
     }
 
     /**

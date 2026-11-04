@@ -23,6 +23,8 @@ export interface ExplosionBurst {
     readonly radius?: number;
     /** Height above the blast where the burst starts (a sub-explosion's `offset`). */
     readonly offset?: number;
+    /** Seconds over which an emitter lets the particles out (its `lifetimeMS`); at once when absent. */
+    readonly seconds?: number;
 }
 
 /**
@@ -50,9 +52,9 @@ export interface ExplosionShake {
 
 const FIRE_BALL: ExplosionBurst = { look: EXPLOSION_FIRE, count: 100, speed: 0.8, speedVariance: 0.5, radius: 2 };
 /** Smoke every 10 ms for 250 ms at 4 m/s. */
-const SMOKE: ExplosionBurst = { look: EXPLOSION_SMOKE, count: 25, speed: 4, speedVariance: 0.5 };
+const SMOKE: ExplosionBurst = { look: EXPLOSION_SMOKE, count: 25, speed: 4, speedVariance: 0.5, seconds: 0.25 };
 /** Sparks every 2 ms for 150 ms at 30 m/s. */
-const SPARKS: ExplosionBurst = { look: EXPLOSION_SPARKS, count: 75, speed: 30, speedVariance: 10 };
+const SPARKS: ExplosionBurst = { look: EXPLOSION_SPARKS, count: 75, speed: 30, speedVariance: 10, seconds: 0.15 };
 const SHAKE: ExplosionShake = { amplitude: 1, frequency: new THREE.Vector3(10, 11, 10), seconds: 0.5, radius: 10 };
 
 /** A Zinger or Magno bomb going off (`RocketExplosion`). */
@@ -71,10 +73,10 @@ export const VEHICLE_WATER_EXPLOSION: ExplosionData = {
     bursts: [
         { ...FIRE_BALL, count: 300, radius: 1 },
         // Bubbles every 9 ms over the explosion's default 1 s life.
-        { look: EXPLOSION_BUBBLE, count: 110, speed: 1, speedVariance: 0.5 },
-        { look: EXPLOSION_BUBBLE, count: 110, speed: 1, speedVariance: 0.5, offset: 1.2 },
+        { look: EXPLOSION_BUBBLE, count: 110, speed: 1, speedVariance: 0.5, seconds: 1 },
+        { look: EXPLOSION_BUBBLE, count: 110, speed: 1, speedVariance: 0.5, offset: 1.2, seconds: 1 },
         // Water sparks every 3 ms for 200 ms.
-        { look: EXPLOSION_WATER_SPARK, count: 67, speed: 4, speedVariance: 4, offset: 1.2 },
+        { look: EXPLOSION_WATER_SPARK, count: 67, speed: 4, speedVariance: 4, offset: 1.2, seconds: 0.2 },
     ],
     sound: 'LiquidExplosionSound',
     lightColor: new THREE.Color(0, 0.5, 0.5),

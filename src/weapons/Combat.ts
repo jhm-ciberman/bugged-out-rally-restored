@@ -301,6 +301,7 @@ export class Combat {
             at.z += burst.offset ?? 0;
             this.particles.burst(burst.look, at, burst.count, burst.speed, burst.speedVariance, undefined, {
                 radius: burst.radius,
+                seconds: burst.seconds,
             });
         }
         const light = this._takeLight();

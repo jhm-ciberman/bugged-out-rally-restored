@@ -80,6 +80,8 @@ class ParticleBatch {
         });
         this.mesh = new THREE.Mesh(this._geometry, material);
         this.mesh.frustumCulled = false;
+        // Glow goes on top, so a fire ball still shines through the smoke thrown out with it.
+        this.mesh.renderOrder = look.useInvAlpha ? 0 : 1;
     }
 
     add(position: THREE.Vector3, velocity: THREE.Vector3): void {
@@ -165,11 +167,40 @@ const _v = new THREE.Vector3();
 const _p = new THREE.Vector3();
 
 /**
+ * How a burst throws its particles out.
+ */
+export interface BurstOptions {
+    /** Scatters the start points in a ball of this radius, like an explosion's `particleRadius`. */
+    readonly radius?: number;
+    /** Spreads directions over the whole sphere instead of the upper half. */
+    readonly fullSphere?: boolean;
+    /** Lets the particles out evenly over this many seconds instead of at once (an emitter's `lifetimeMS`). */
+    readonly seconds?: number;
+}
+
+/**
+ * A timed burst still letting its particles out.
+ */
+interface Emitter {
+    readonly look: ParticleLook;
+    readonly position: THREE.Vector3;
+    readonly count: number;
+    readonly speed: number;
+    readonly speedVariance: number;
+    readonly inherit: THREE.Vector3 | undefined;
+    readonly options: BurstOptions;
+    readonly seconds: number;
+    age: number;
+    emitted: number;
+}
+
+/**
  * Camera-facing particles for explosions, trails, splashes and dust, after Torque's particle engine.
  */
 export class Particles {
     readonly object = new THREE.Group();
     private readonly _batches = new Map<ParticleLook, ParticleBatch>();
+    private readonly _emitters: Emitter[] = [];
 
     /**
      * Adds one particle at `position` moving at `velocity`.
@@ -182,8 +213,8 @@ export class Particles {
      * Throws `count` particles out of `position` at about `speed` m/s.
      *
      * Directions are spread over the upper half sphere (the default 0-90 degree ejection cone of
-     * `ParticleEmitterData`), unless `fullSphere`. `radius` scatters the start points in a ball, like
-     * an explosion's `particleRadius`.
+     * `ParticleEmitterData`), unless `fullSphere`. With `seconds`, the particles come out over the
+     * following updates rather than now.
      */
     burst(
         look: ParticleLook,
@@ -192,8 +223,24 @@ export class Particles {
         speed: number,
         speedVariance = speed * 0.5,
         inherit?: THREE.Vector3,
-        options: { radius?: number; fullSphere?: boolean } = {},
+        options: BurstOptions = {},
     ): void {
+        if (options.seconds) {
+            const { seconds } = options;
+            this._emitters.push({
+                look,
+                position: position.clone(),
+                count,
+                speed,
+                speedVariance,
+                inherit: inherit?.clone(),
+                options: { ...options, seconds: undefined },
+                seconds,
+                age: 0,
+                emitted: 0,
+            });
+            return;
+        }
         const batch = this._batch(look);
         for (let i = 0; i < count; i++) {
             randomDirection(_v, options.fullSphere ?? false);
@@ -215,11 +262,22 @@ export class Particles {
 
     update(dt: number): void {
         for (const b of this._batches.values()) b.update(dt);
+        for (let i = this._emitters.length - 1; i >= 0; i--) {
+            const e = this._emitters[i];
+            e.age += dt;
+            const due = Math.min(e.count, Math.round((e.count * e.age) / e.seconds));
+            if (due > e.emitted) {
+                this.burst(e.look, e.position, due - e.emitted, e.speed, e.speedVariance, e.inherit, e.options);
+                e.emitted = due;
+            }
+            if (e.emitted >= e.count) this._emitters.splice(i, 1);
+        }
     }
 
     dispose(): void {
         for (const b of this._batches.values()) b.dispose();
         this._batches.clear();
+        this._emitters.length = 0;
         this.object.clear();
     }
 
