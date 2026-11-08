@@ -5,8 +5,9 @@ import { ModelLibrary } from './assets/ModelLibrary';
 import { AudioSystem } from './audio/AudioSystem';
 import { FlyCamera } from './camera/FlyCamera';
 import { RaceSession } from './game/RaceSession';
-import { renderPixelRatio, textureAnisotropy } from './game/Settings';
+import { renderPixelRatio, textureAnisotropy, touchControlsEnabled } from './game/Settings';
 import type { IUpdatable } from './IUpdatable';
+import { TouchControls } from './input/TouchControls';
 import { DEFAULT_FOV } from './input/VehicleInput';
 import { CarShadows } from './render/CarShadows';
 import { parseVector } from './torque/TorqueMath';
@@ -34,6 +35,8 @@ export interface RaceStart {
     readonly onFinished?: (result: RaceResult) => void;
     /** Called with the choice made on the finish screen. */
     readonly onFinishChoice: (choice: FinishChoice) => void;
+    /** Called when the player asks for the in-race menu from the touch controls. */
+    readonly onPause: () => void;
     /** Whether the player may race `track` (1 to 8) next, for the finish screen's track picker. */
     readonly canRace: (track: number) => boolean;
     /** Reports loading steps and progress (0 to 1). */
@@ -66,6 +69,7 @@ export class Game {
     private _track: Track | null = null;
     private _session: RaceSession | null = null;
     private _hud: RaceHud | null = null;
+    private _touch: TouchControls | null = null;
     private _shadows: CarShadows | null = null;
     private _fly: FlyCamera | null = null;
     /** Horizontal field of view the camera shows, in degrees (Torque measures it across). */
@@ -156,6 +160,10 @@ export class Game {
         this._scene.add(this._shadows.object);
         this._scene.add(session.combat.object);
         this._entities.push(session, hud);
+        if (touchControlsEnabled()) {
+            this._touch = new TouchControls(this._container, session.input, start.onPause);
+            this._entities.push(this._touch);
+        }
         const music = track.find('MissionGroup')?.fields.get('musictrack');
         if (music) void this.audio.playMusic(music);
     }
@@ -219,11 +227,13 @@ export class Game {
     endRace(): void {
         this._session?.dispose();
         this._hud?.dispose();
+        this._touch?.dispose();
         this._shadows?.dispose();
         this._shadows = null;
         this._fly?.dispose();
         this._session = null;
         this._hud = null;
+        this._touch = null;
         this._fly = null;
         this._entities = [];
         this.audio.stopMusic();

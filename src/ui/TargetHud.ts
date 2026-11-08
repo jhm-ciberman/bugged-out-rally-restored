@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { assetUrl } from '../assets/AssetPaths';
 import type { Car } from '../game/Car';
 import type { RaceSession } from '../game/RaceSession';
-import { arialFont } from './GuiControls';
+import { arialFont, guiPx } from './GuiControls';
 
 /** Name tags sit this far above a car's origin (`verticalOffset` in PlayGui.gui). */
 const NAME_HEIGHT = 0.2;
@@ -45,8 +45,8 @@ export class TargetHud {
             position: 'absolute',
             left: '50%',
             top: '50%',
-            width: '32px',
-            height: '32px',
+            width: guiPx(32),
+            height: guiPx(32),
             transform: 'translate(-50%, -50%)',
             display: 'none',
         });
@@ -54,12 +54,12 @@ export class TargetHud {
         Object.assign(this._bar.style, {
             position: 'absolute',
             left: '50%',
-            top: `calc(50% + ${BAR.offsetY}px)`,
-            width: `${BAR.width}px`,
-            height: `${BAR.height}px`,
-            marginLeft: `${-BAR.width / 2}px`,
+            top: `calc(50% + ${guiPx(BAR.offsetY)})`,
+            width: guiPx(BAR.width),
+            height: guiPx(BAR.height),
+            marginLeft: guiPx(-BAR.width / 2),
             boxSizing: 'border-box',
-            border: '1px solid rgb(255, 153, 0)',
+            border: `${guiPx(1)} solid rgb(255, 153, 0)`,
             display: 'none',
         });
         Object.assign(this._barFill.style, { height: '100%', background: 'rgb(0, 255, 0)' });
@@ -138,12 +138,12 @@ export class TargetHud {
             const bar = document.createElement('div');
             Object.assign(bar.style, {
                 position: 'absolute',
-                left: `${-NAME_BAR.width / 2}px`,
-                top: `${NAME_BAR.offsetY}px`,
-                width: `${NAME_BAR.width}px`,
-                height: `${NAME_BAR.height}px`,
+                left: guiPx(-NAME_BAR.width / 2),
+                top: guiPx(NAME_BAR.offsetY),
+                width: guiPx(NAME_BAR.width),
+                height: guiPx(NAME_BAR.height),
                 boxSizing: 'border-box',
-                border: '1px solid rgb(255, 153, 0)',
+                border: `${guiPx(1)} solid rgb(255, 153, 0)`,
             });
             const fill = document.createElement('div');
             Object.assign(fill.style, { height: '100%', background: 'rgb(0, 255, 0)' });

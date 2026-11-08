@@ -27,6 +27,8 @@ const MOUSE_BUTTONS = ['Mouse0', 'Mouse2', 'Mouse1'];
 export class VehicleInput {
     /** Keys and mouse buttons held down, as stored in the bindings. */
     private readonly _held = new Set<string>();
+    /** Actions held directly, without going through a binding. */
+    private readonly _heldActions = new Set<Action>();
     private _mouseYaw = 0;
     private _resetRequested = false;
     private _firstPerson = false;
@@ -61,6 +63,7 @@ export class VehicleInput {
         this._enabled = enabled;
         if (!enabled) {
             this._held.clear();
+            this._heldActions.clear();
             this._mouseYaw = 0;
         }
     }
@@ -114,6 +117,22 @@ export class VehicleInput {
     }
 
     /**
+     * Holds or lets go of `action` whatever key it is bound to, for actions that work while held. Holding is
+     * ignored while input is off.
+     */
+    setActionHeld(action: Action, held: boolean): void {
+        if (held && this._enabled) this._heldActions.add(action);
+        else this._heldActions.delete(action);
+    }
+
+    /**
+     * Asks to put the car back on the track, like the reset key. Ignored while input is off.
+     */
+    requestReset(): void {
+        if (this._enabled) this._resetRequested = true;
+    }
+
+    /**
      * Removes the input listeners.
      */
     dispose(): void {
@@ -129,8 +148,10 @@ export class VehicleInput {
     }
 
     private readonly _onClick = (): void => {
-        // Raw mouse counts, like DirectInput, where the browser supports it.
-        this._element.requestPointerLock({ unadjustedMovement: true })?.catch(() => this._element.requestPointerLock());
+        // Raw mouse counts, like DirectInput, where the browser supports it. Phones may not have pointer lock at all.
+        this._element
+            .requestPointerLock?.({ unadjustedMovement: true })
+            ?.catch(() => this._element.requestPointerLock()?.catch(() => undefined));
     };
 
     // Right mouse drops bombs, so it must not open the browser menu.
@@ -139,6 +160,7 @@ export class VehicleInput {
     };
 
     private _isHeld(action: Action): boolean {
+        if (this._heldActions.has(action)) return true;
         const input = bindingOf(action);
         return input !== null && this._held.has(input);
     }

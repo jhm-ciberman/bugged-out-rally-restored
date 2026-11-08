@@ -1,4 +1,5 @@
-import { bitmapButton, SAFARI_MEDIUM_TEXT } from '../GuiControls';
+import { bitmapButton, guiPx, SAFARI_MEDIUM_TEXT } from '../GuiControls';
+import { guiScale } from '../GuiLayout';
 
 /**
  * Shows the game's message box (`PromptOK` in PromptBoxOkDlg.gui): a green window with a title,
@@ -16,26 +17,38 @@ export function promptOk(parent: HTMLElement, title: string, message: string): P
             left: '50%',
             top: '50%',
             transform: 'translate(-50%, -50%)',
-            width: '300px',
-            minHeight: '129px',
+            width: guiPx(300),
+            minHeight: guiPx(129),
             boxSizing: 'border-box',
             background: 'rgb(117, 185, 100)',
             border: '2px solid rgb(255, 215, 0)',
-            padding: '6px',
+            padding: guiPx(6),
         });
         const titleBar = document.createElement('div');
         titleBar.textContent = title;
-        Object.assign(titleBar.style, { ...SAFARI_MEDIUM_TEXT, marginBottom: '8px' });
+        Object.assign(titleBar.style, { ...SAFARI_MEDIUM_TEXT, marginBottom: guiPx(8) });
         const body = document.createElement('div');
         body.textContent = message;
-        Object.assign(body.style, { ...SAFARI_MEDIUM_TEXT, textAlign: 'center', padding: '0 20px 12px' });
+        Object.assign(body.style, {
+            ...SAFARI_MEDIUM_TEXT,
+            textAlign: 'center',
+            padding: `0 ${guiPx(20)} ${guiPx(12)}`,
+        });
+        // The box grows with the menu behind it, but stays readable on a screen smaller than the original.
+        const scaleToScreen = () => {
+            const scale = Math.max(1, guiScale(window.innerWidth, window.innerHeight));
+            blocker.style.setProperty('--gui-scale', String(scale));
+        };
+        scaleToScreen();
+        window.addEventListener('resize', scaleToScreen);
         const close = () => {
+            window.removeEventListener('resize', scaleToScreen);
             window.removeEventListener('keydown', onKey, true);
             blocker.remove();
             resolve();
         };
         const ok = bitmapButton('buttons/ok', close);
-        Object.assign(ok.style, { display: 'block', width: '96px', height: '32px', margin: '0 auto' });
+        Object.assign(ok.style, { display: 'block', width: guiPx(96), height: guiPx(32), margin: '0 auto' });
         const onKey = (e: KeyboardEvent) => {
             if (e.code === 'Enter' || e.code === 'NumpadEnter') {
                 e.preventDefault();

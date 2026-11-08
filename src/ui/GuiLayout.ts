@@ -39,6 +39,41 @@ function axis(pos: number, size: number, design: number, actual: number, mode: G
     }
 }
 
+/** Screen height up to which the race HUD and the touch buttons keep their design size. */
+const HUD_REFERENCE_HEIGHT = 768;
+
+/**
+ * Returns how much bigger the race HUD and the touch buttons draw on a screen `height` pixels tall. They never draw
+ * smaller than the design.
+ */
+export function hudScale(height: number): number {
+    return Math.max(1, height / HUD_REFERENCE_HEIGHT);
+}
+
+/**
+ * Returns `rect` grown by `scale` and still anchored as it was: its distance from the edge or center it follows
+ * grows too. Parts that already scale with the screen stay as they are.
+ */
+export function scaleAnchoredRect(rect: GuiRect, scale: number): GuiRect {
+    const [x, w] = scaleAxis(rect.x, rect.w, DESIGN_WIDTH, rect.horiz, scale);
+    const [y, h] = scaleAxis(rect.y, rect.h, DESIGN_HEIGHT, rect.vert, scale);
+    return { ...rect, x, y, w, h };
+}
+
+function scaleAxis(pos: number, size: number, design: number, mode: GuiSizing, scale: number): [number, number] {
+    switch (mode) {
+        case 'relative':
+            return [pos, size];
+        case 'left':
+        case 'top':
+            return [design - (design - pos) * scale, size * scale];
+        case 'center':
+            return [design / 2 + (pos + size / 2 - design / 2) * scale - (size * scale) / 2, size * scale];
+        default:
+            return [pos * scale, size * scale];
+    }
+}
+
 /**
  * Positions `element` (absolutely) for a screen of `width` x `height` pixels.
  */
@@ -62,12 +97,22 @@ export function controlBounds(rect: GuiRect, width: number, height: number) {
 }
 
 /**
+ * Returns how much bigger than the 800x600 design a menu drawn in `width` x `height` is.
+ */
+export function guiScale(width: number, height: number): number {
+    return Math.min(width / DESIGN_WIDTH, height / DESIGN_HEIGHT);
+}
+
+/**
  * Sizes and centers `stage` as the largest 4:3 box that fits in `width` x `height`, and returns its size.
  * The menus are 800x600 pictures, so they keep their shape on wide screens instead of stretching.
+ * The text inside the stage scales with it.
  */
 export function fitStage(stage: HTMLElement, width: number, height: number): { w: number; h: number } {
-    const w = Math.min(width, (height * DESIGN_WIDTH) / DESIGN_HEIGHT);
-    const h = (w * DESIGN_HEIGHT) / DESIGN_WIDTH;
+    const scale = guiScale(width, height);
+    const w = scale * DESIGN_WIDTH;
+    const h = scale * DESIGN_HEIGHT;
+    stage.style.setProperty('--gui-scale', String(scale));
     Object.assign(stage.style, {
         position: 'absolute',
         left: `${(width - w) / 2}px`,
