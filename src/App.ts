@@ -11,6 +11,7 @@ import { ControlMenu } from './ui/menus/ControlMenu';
 import { IngameMenu } from './ui/menus/IngameMenu';
 import { LoadingScreen } from './ui/menus/LoadingScreen';
 import { MainMenu } from './ui/menus/MainMenu';
+import { preloadMenuArt } from './ui/menus/MenuArt';
 import type { MenuScreen } from './ui/menus/MenuScreen';
 import { OptionsMenu } from './ui/menus/OptionsMenu';
 import { PlayerSelection } from './ui/menus/PlayerSelection';
@@ -54,12 +55,20 @@ export class App {
      * Starts at the splash screen.
      */
     start(): void {
+        const splashUrl = assetUrl('common/ui/splashscreen00.jpg');
+        // The menu art starts after the splash picture, so it does not compete with it for the connection.
+        const splashPicture = new Image();
+        splashPicture.src = splashUrl;
+        void splashPicture
+            .decode()
+            .catch(() => undefined)
+            .then(preloadMenuArt);
         // The splash waits for a click, which also lets the browser start the audio.
         const splash = document.createElement('div');
         Object.assign(splash.style, {
             position: 'absolute',
             inset: '0',
-            background: `#000 url(${assetUrl('common/ui/splashscreen00.jpg')}) center / contain no-repeat`,
+            background: `#000 url(${splashUrl}) center / contain no-repeat`,
             pointerEvents: 'auto',
             cursor: 'pointer',
         });
