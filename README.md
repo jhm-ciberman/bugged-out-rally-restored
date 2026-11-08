@@ -1,11 +1,11 @@
-# Bugged Out Rally, Restored
+# Bugged Out Rally Restored
 
 A browser port of **Bugged Out Rally**, a combat racing game where you drive bugs on wheels. Built with three.js and TypeScript, using the original assets and rules.
 
 > [!NOTE]
 > Bugged Out Rally is not my game. It was made in **2004** by **Inoculous Games** and is now **abandonware**: the studio is no longer active and the game can no longer be bought. This is a fan restoration to keep it playable.
 
-![Screenshot of Bugged Out Rally, Restored](./art/bugged-out-rally-screenshot.jpg)
+![Screenshot of Bugged Out Rally Restored](./art/bugged-out-rally-screenshot.jpg)
 
 ## 👨‍💻 Development
 
