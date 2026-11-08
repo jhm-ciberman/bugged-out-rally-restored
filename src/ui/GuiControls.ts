@@ -48,23 +48,28 @@ export function bitmapButton(
     return button;
 }
 
-/** Decoded button pictures, kept alive so the browser does not drop them. */
+/** Decoded menu pictures, kept alive so the browser does not drop them. */
 const preloaded = new Map<string, HTMLImageElement>();
+
+/**
+ * Loads and decodes a picture up front, given its path under `public/assets`. A picture that fails to load is skipped.
+ */
+export function preloadPicture(path: string): void {
+    const url = assetUrl(path);
+    if (preloaded.has(url)) return;
+    const img = new Image();
+    img.src = url;
+    // Some buttons ship without every state; a missing picture is fine.
+    img.decode().catch(() => undefined);
+    preloaded.set(url, img);
+}
 
 /**
  * Loads and decodes every state picture of a button up front, so the first hover or press
  * swaps the art without a blank frame.
  */
-function preloadButtonArt(bitmap: string): void {
-    for (const state of ['n', 'h', 'd', 'i']) {
-        const url = assetUrl(`client/ui/${bitmap}_${state}.png`);
-        if (preloaded.has(url)) continue;
-        const img = new Image();
-        img.src = url;
-        // Some buttons ship without every state; a missing picture is fine.
-        img.decode().catch(() => undefined);
-        preloaded.set(url, img);
-    }
+export function preloadButtonArt(bitmap: string): void {
+    for (const state of ['n', 'h', 'd', 'i']) preloadPicture(`client/ui/${bitmap}_${state}.png`);
 }
 
 /**
