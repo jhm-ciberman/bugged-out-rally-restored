@@ -1,4 +1,4 @@
-import { arialFont } from './GuiControls';
+import { arialFont, guiPx } from './GuiControls';
 
 /**
  * Text colors of the message log, by the `\c` index a message starts with (`ChatHudMessageProfile`).
@@ -60,37 +60,39 @@ export class ChatHud {
     private _linesBack = 0;
     /** Width of the screen, which places the "Dwn" sign. */
     private _screenWidth = 0;
+    /** How much bigger than the design the log draws. */
+    private _scale = 1;
 
     constructor() {
         Object.assign(this.element.style, { position: 'absolute', left: '0', top: '0' });
         Object.assign(this._window.style, {
             position: 'absolute',
-            left: `${WINDOW_X}px`,
-            top: `${WINDOW_Y}px`,
-            height: `${WINDOW_HEIGHT}px`,
+            left: guiPx(WINDOW_X),
+            top: guiPx(WINDOW_Y),
+            height: guiPx(WINDOW_HEIGHT),
             overflow: 'hidden',
         });
         Object.assign(this._lines.style, {
             position: 'absolute',
-            left: `${TEXT_INSET}px`,
-            right: `${TEXT_INSET}px`,
-            top: `${TEXT_INSET}px`,
+            left: guiPx(TEXT_INSET),
+            right: guiPx(TEXT_INSET),
+            top: guiPx(TEXT_INSET),
             font: arialFont(LINE_HEIGHT, true),
-            lineHeight: `${LINE_HEIGHT}px`,
+            lineHeight: guiPx(LINE_HEIGHT),
         });
         // A `GuiButtonProfile` button: gold, black border, white centered Arial 14.
         this._down.textContent = 'Dwn';
         Object.assign(this._down.style, {
             position: 'absolute',
-            top: `${PARENT_Y + DOWN_SIGN.top}px`,
-            width: `${DOWN_SIGN.w}px`,
-            height: `${DOWN_SIGN.h}px`,
+            top: guiPx(PARENT_Y + DOWN_SIGN.top),
+            width: guiPx(DOWN_SIGN.w),
+            height: guiPx(DOWN_SIGN.h),
             boxSizing: 'border-box',
-            border: '1px solid #000',
+            border: `${guiPx(1)} solid #000`,
             background: 'rgb(255, 192, 55)',
             color: '#fff',
             font: arialFont(14),
-            lineHeight: `${DOWN_SIGN.h - 2}px`,
+            lineHeight: guiPx(DOWN_SIGN.h - 2),
             textAlign: 'center',
             display: 'none',
         });
@@ -107,12 +109,12 @@ export class ChatHud {
         line.textContent = text;
         Object.assign(line.style, {
             color: COLORS[color],
-            paddingLeft: `${CONTINUED_INDENT}px`,
-            textIndent: `-${CONTINUED_INDENT}px`,
+            paddingLeft: guiPx(CONTINUED_INDENT),
+            textIndent: guiPx(-CONTINUED_INDENT),
         });
         this._lines.append(line);
         if (this._linesBack > 0) {
-            this._linesBack += Math.round((this._lines.offsetHeight - before) / LINE_HEIGHT);
+            this._linesBack += Math.round((this._lines.offsetHeight - before) / this._lineHeight);
         } else {
             // The oldest messages are only dropped while the newest are in view.
             while (this._lines.childElementCount > MAX_LINES) this._lines.firstElementChild?.remove();
@@ -124,8 +126,8 @@ export class ChatHud {
      * Scrolls back a page of older lines.
      */
     pageUp(): void {
-        const hidden = this._lines.offsetHeight - WINDOW_HEIGHT - this._linesBack * LINE_HEIGHT;
-        const lines = Math.floor(hidden / LINE_HEIGHT + 0.5);
+        const hidden = this._lines.offsetHeight - WINDOW_HEIGHT * this._scale - this._linesBack * this._lineHeight;
+        const lines = Math.floor(hidden / this._lineHeight + 0.5);
         if (lines <= 0) return;
         this._linesBack += Math.min(lines, PAGE_LINES);
         this._layout();
@@ -140,22 +142,28 @@ export class ChatHud {
     }
 
     /**
-     * Sizes the log for a screen `width` pixels wide.
+     * Sizes the log for a screen `width` pixels wide, drawn `scale` times its design size.
      */
-    resize(width: number): void {
+    resize(width: number, scale: number): void {
         this._screenWidth = width;
+        this._scale = scale;
         this._layout();
+    }
+
+    private get _lineHeight(): number {
+        return LINE_HEIGHT * this._scale;
     }
 
     private _layout(): void {
         // The log's dialog is laid out for a 640 pixel screen and stretched to the real one: its box keeps a
         // fixed margin on the right of a parent that takes 400/640 of the width.
         const parentWidth = (this._screenWidth * 400) / 640;
-        this._window.style.width = `${Math.max(0, parentWidth - 144)}px`;
-        this._down.style.left = `${parentWidth - DOWN_SIGN.right}px`;
-        const overflow = this._lines.offsetHeight + TEXT_INSET - WINDOW_HEIGHT;
-        const top = overflow > 0 ? TEXT_INSET - overflow : TEXT_INSET;
-        this._lines.style.top = `${top + this._linesBack * LINE_HEIGHT}px`;
+        this._window.style.width = `${Math.max(0, parentWidth - 144 * this._scale)}px`;
+        this._down.style.left = `${parentWidth - DOWN_SIGN.right * this._scale}px`;
+        const inset = TEXT_INSET * this._scale;
+        const overflow = this._lines.offsetHeight + inset - WINDOW_HEIGHT * this._scale;
+        const top = overflow > 0 ? inset - overflow : inset;
+        this._lines.style.top = `${top + this._linesBack * this._lineHeight}px`;
         this._down.style.display = this._linesBack > 0 ? '' : 'none';
     }
 }

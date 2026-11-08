@@ -176,6 +176,11 @@ export class RaceSession implements IUpdatable {
         this._input.enabled = enabled;
     }
 
+    /** The player's controls. */
+    get input(): VehicleInput {
+        return this._input;
+    }
+
     /** When set, the race leaves the camera alone (for a debug fly camera). */
     freeCamera = false;
 

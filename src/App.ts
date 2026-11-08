@@ -16,6 +16,7 @@ import type { MenuScreen } from './ui/menus/MenuScreen';
 import { OptionsMenu } from './ui/menus/OptionsMenu';
 import { PlayerSelection } from './ui/menus/PlayerSelection';
 import { QuitPage } from './ui/menus/QuitPage';
+import { StartHint } from './ui/menus/StartHint';
 import { isTrackUnlocked, VenueSelection } from './ui/menus/VenueSelection';
 
 /** Fewest racers for a first place to open the next track (`addPlayerWinnings`). */
@@ -72,7 +73,10 @@ export class App {
             pointerEvents: 'auto',
             cursor: 'pointer',
         });
+        const hint = new StartHint();
+        splash.append(hint.element);
         const go = () => {
+            hint.dispose();
             splash.remove();
             this.mainMenu();
         };
@@ -170,6 +174,7 @@ export class App {
                 onProgress: (step, fraction) => loading.setProgress(step, fraction),
                 onFinished: (result) => this._award(plan, result),
                 onFinishChoice: (choice) => this._onFinishChoice(choice),
+                onPause: () => this._escapeFromGame(),
                 canRace: (track) => isTrackUnlocked(this._currentProfile(plan), plan.event, track - 1),
             });
         } catch (err) {
@@ -254,7 +259,7 @@ export class App {
     private _ingameMenu(): void {
         const plan = this._plan;
         if (!plan) return;
-        document.exitPointerLock();
+        document.exitPointerLock?.();
         this._openDialog(
             new IngameMenu(plan.track, {
                 cancel: () => this._closeDialog(),
@@ -266,10 +271,14 @@ export class App {
         );
     }
 
-    // Escape opens the in-race menu, unless the race is over (`escapeFromGame`).
     private readonly _onKey = (e: KeyboardEvent): void => {
-        if (e.code !== 'Escape' || !this._racing || this._dialog) return;
+        if (e.code === 'Escape') this._escapeFromGame();
+    };
+
+    // Opens the in-race menu, unless the race is over (`escapeFromGame`).
+    private _escapeFromGame(): void {
+        if (!this._racing || this._dialog) return;
         if (this._game.session?.playerRacer.finishTime !== null) return;
         this._ingameMenu();
-    };
+    }
 }

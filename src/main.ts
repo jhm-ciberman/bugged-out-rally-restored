@@ -1,7 +1,10 @@
 import { App } from './App';
 import { DebugPanel } from './debug/DebugPanel';
 import { Game } from './Game';
+import { touchControlsEnabled } from './game/Settings';
+import { FullscreenButton } from './input/FullscreenButton';
 import { parseVector } from './torque/TorqueMath';
+import { isFramed } from './ui/PageFullscreen';
 
 const ui = document.createElement('div');
 // Menus and dialogs draw above the race and its HUD.
@@ -12,6 +15,7 @@ const app = new App(game, ui);
 // Exposed for debugging from the browser console.
 (window as unknown as { game: Game }).game = game;
 new DebugPanel(game);
+if (touchControlsEnabled() && isFramed()) new FullscreenButton(document.body);
 
 const params = new URLSearchParams(window.location.search);
 const trackParam = Number(params.get('track'));

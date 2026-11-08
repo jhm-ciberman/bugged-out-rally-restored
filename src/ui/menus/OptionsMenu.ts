@@ -1,6 +1,7 @@
 import { assetUrl } from '../../assets/AssetPaths';
-import { getSettings, type Settings, updateSettings } from '../../game/Settings';
-import { arialFont, safariSlider, styleTorqueCheckbox } from '../GuiControls';
+import { getSettings, type Settings, touchControlsEnabled, updateSettings } from '../../game/Settings';
+import { arialFont, guiPx, safariSlider, styleTorqueCheckbox } from '../GuiControls';
+import { bindFullscreenCheckbox } from '../PageFullscreen';
 import { MenuScreen, rel } from './MenuScreen';
 
 /** `GuiSafariPopUpMenuProfile`: orange fill and white text, drawn like the original menu box. */
@@ -24,6 +25,8 @@ const POPUP_STYLE: Partial<CSSStyleDeclaration> = {
  * the Bit Depth menu, and Texture Detail, Full Screen, the volumes and mouse sensitivity keep their place.
  */
 export class OptionsMenu extends MenuScreen {
+    private readonly _unbindFullscreen: () => void;
+
     constructor(onBack: () => void, onChange: (settings: Settings) => void, onControls: () => void) {
         super('optionsselection.jpg');
         const s = getSettings();
@@ -68,22 +71,25 @@ export class OptionsMenu extends MenuScreen {
         // Styled like the labels painted into the background.
         this.text(
             'Unlock Everything',
-            { font: 'bold 22px Verdana, Tahoma, sans-serif', color: 'rgb(215, 14, 48)' },
+            { font: `bold ${guiPx(22)} Verdana, Tahoma, sans-serif`, color: 'rgb(215, 14, 48)' },
             rel(94, 186, 300, 28),
             { textShadow: '2px 2px 1px rgba(60, 0, 0, 0.7)' },
         );
-        const unlock = this._checkbox(rel(75, 192, 14, 15), s.unlockAll);
+        const { box: unlock } = this._checkbox(rel(75, 192, 14, 15), s.unlockAll);
         unlock.addEventListener('change', () => changed({ unlockAll: unlock.checked }));
 
-        const fullscreen = this._checkbox(rel(75, 389, 14, 15), document.fullscreenElement !== null);
-        fullscreen.addEventListener('change', () => {
-            if (fullscreen.checked) void document.documentElement.requestFullscreen().catch(() => undefined);
-            else if (document.fullscreenElement) void document.exitFullscreen();
-        });
+        const fullscreen = this._checkbox(rel(75, 389, 14, 15), false);
+        this._unbindFullscreen = bindFullscreenCheckbox(fullscreen.box, fullscreen.repaint);
 
         // The original points at `buttons/back`, which never shipped; `back` is the art it meant.
         this.button('back', rel(69, 525, 95, 29), onBack);
-        this.button('control', rel(325, 525, 94, 29), onControls);
+        // The controls menu waits for a key, which a touch screen doesn't have.
+        if (!touchControlsEnabled()) this.button('control', rel(325, 525, 94, 29), onControls);
+    }
+
+    override dispose(): void {
+        this._unbindFullscreen();
+        super.dispose();
     }
 
     private _popup(rect: ReturnType<typeof rel>, options: string[][], value: string): HTMLSelectElement {
@@ -99,12 +105,11 @@ export class OptionsMenu extends MenuScreen {
         return select;
     }
 
-    private _checkbox(rect: ReturnType<typeof rel>, checked: boolean): HTMLInputElement {
+    private _checkbox(rect: ReturnType<typeof rel>, checked: boolean): { box: HTMLInputElement; repaint: () => void } {
         const box = this.add(document.createElement('input'), rect);
         box.type = 'checkbox';
         box.checked = checked;
-        styleTorqueCheckbox(box);
-        return box;
+        return { box, repaint: styleTorqueCheckbox(box) };
     }
 
     /**

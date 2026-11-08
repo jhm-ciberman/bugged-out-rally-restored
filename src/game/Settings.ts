@@ -43,10 +43,18 @@ const DEFAULTS: Settings = {
 const RENDER_SCALE: Record<Exclude<Settings['renderQuality'], 'native'>, number> = { low: 0.5, medium: 0.75, high: 1 };
 
 /**
- * Returns the pixel ratio to render at for the current settings.
+ * Returns whether `?touch` in the URL asked for the on-screen touch controls.
+ */
+export function touchControlsEnabled(): boolean {
+    return new URLSearchParams(window.location.search).has('touch');
+}
+
+/**
+ * Returns the pixel ratio to render at for the current settings. With the touch controls on it is always the
+ * low quality, whatever the player saved.
  */
 export function renderPixelRatio(): number {
-    const quality = getSettings().renderQuality;
+    const quality = touchControlsEnabled() ? 'low' : getSettings().renderQuality;
     if (quality === 'native') return window.devicePixelRatio;
     return Math.min(window.devicePixelRatio, 2) * (RENDER_SCALE[quality] ?? 1);
 }

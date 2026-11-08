@@ -4,7 +4,7 @@ import { firstPrize, KILL_VALUE, placePrize } from '../game/Prizes';
 import type { Racer } from '../game/Race';
 import type { RaceSession } from '../game/RaceSession';
 import { TRACK_NAMES } from '../game/Tracks';
-import { bitmapButton, MEDIUM_TEXT, SAFARI_MEDIUM_TEXT, setButtonEnabled } from './GuiControls';
+import { bitmapButton, guiPx, MEDIUM_TEXT, SAFARI_MEDIUM_TEXT, setButtonEnabled } from './GuiControls';
 import { fitStage, type GuiRect, placeControl } from './GuiLayout';
 import { formatRaceTime } from './Hud';
 
@@ -74,6 +74,7 @@ export class FinishScreen {
             inset: '0',
             background: `url(${assetUrl('client/ui/hudfill.png')}) center / 100% 100%`,
             pointerEvents: 'auto',
+            overflow: 'hidden',
         });
 
         this._add(this._image('scoreboard_n.png'), rel(PANEL.x, PANEL.y, 725, 425));
@@ -173,7 +174,7 @@ export class FinishScreen {
 
     private _text(text: string, profile: { font: string; color: string }): HTMLElement {
         const t = document.createElement('div');
-        Object.assign(t.style, { ...profile, whiteSpace: 'pre', lineHeight: '22px' });
+        Object.assign(t.style, { ...profile, whiteSpace: 'pre', lineHeight: guiPx(22) });
         setTorqueText(t, text);
         return t;
     }

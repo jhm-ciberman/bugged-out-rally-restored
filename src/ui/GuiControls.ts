@@ -85,11 +85,19 @@ export function setButtonEnabled(button: HTMLButtonElement, enabled: boolean, bi
 const ARIAL_CELL_HEIGHT = (1854 + 434) / 2048;
 
 /**
+ * Returns a CSS length of `pixels` that grows and shrinks with the menu it is in. Outside a menu it is `pixels`.
+ */
+export function guiPx(pixels: number): string {
+    return `calc(var(--gui-scale, 1) * ${pixels}px)`;
+}
+
+/**
  * Returns the CSS font for the Arial of a Torque font profile of `size`. Torque sizes a font by the height of
- * its whole character cell, so its letters come out smaller than a CSS font of the same size.
+ * its whole character cell, so its letters come out smaller than a CSS font of the same size. The font scales
+ * with the menu it is in, so it works on HTML elements only, not on a canvas.
  */
 export function arialFont(size: number, bold = false): string {
-    return `${bold ? 'bold ' : ''}${size / ARIAL_CELL_HEIGHT}px Arial, sans-serif`;
+    return `${bold ? 'bold ' : ''}${guiPx(size / ARIAL_CELL_HEIGHT)} Arial, sans-serif`;
 }
 
 /** Arial Bold 24, gold (`GuiMediumTextProfile`). */
@@ -208,9 +216,10 @@ const CHECK_SPRITE = { height: 66, cell: 15, stride: 16 };
 
 /**
  * Draws a checkbox with the game's own art (`GuiCheckBoxProfile`, `safcheck.png`): off or on, and the pressed
- * look while the mouse button is down (`GuiCheckBoxCtrl::onRender`). Keeps working as a normal checkbox.
+ * look while the mouse button is down (`GuiCheckBoxCtrl::onRender`). Keeps working as a normal checkbox. Returns a
+ * function that redraws the box after code changes its state.
  */
-export function styleTorqueCheckbox(box: HTMLInputElement): void {
+export function styleTorqueCheckbox(box: HTMLInputElement): () => void {
     let pressed = false;
     const paint = () => {
         const index = (box.checked ? 1 : 0) + (pressed ? 2 : 0);
@@ -240,4 +249,5 @@ export function styleTorqueCheckbox(box: HTMLInputElement): void {
     });
     box.addEventListener('change', paint);
     paint();
+    return paint;
 }

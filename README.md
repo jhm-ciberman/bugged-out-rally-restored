@@ -68,6 +68,7 @@ Shortcuts for development. They can be combined.
 | `?debug`                | Shows the debug panel (also F2)                                                                        |
 | `?nofog`                | Starts with the fog off                                                                                |
 | `?view=N`               | Draws `N` times as far as the original                                                                 |
+| `?touch`                | Shows on-screen touch controls in a race and renders at low quality for this visit                     |
 
 ## 🎮 The Game
 

@@ -154,7 +154,7 @@ export class RaceHud {
     private _showFinish(): void {
         if (this._finish || !this._session) return;
         this._session.inputEnabled = false;
-        document.exitPointerLock();
+        document.exitPointerLock?.();
         this._finish = new FinishScreen(
             this._parent,
             this._session,

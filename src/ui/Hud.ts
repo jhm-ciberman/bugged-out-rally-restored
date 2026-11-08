@@ -1,7 +1,7 @@
 import { assetUrl } from '../assets/AssetPaths';
 import { ChatHud } from './ChatHud';
-import { arialFont } from './GuiControls';
-import { type GuiRect, placeControl } from './GuiLayout';
+import { arialFont, guiPx } from './GuiControls';
+import { type GuiRect, hudScale, placeControl, scaleAnchoredRect } from './GuiLayout';
 
 const ui = (file: string) => assetUrl(`client/ui/${file}`);
 
@@ -101,7 +101,7 @@ export class Hud {
             font: arialFont(14),
             color: 'rgb(0, 255, 0)',
             textAlign: 'center',
-            lineHeight: '20px',
+            lineHeight: guiPx(20),
         });
         centerPrint.append(this._centerText);
 
@@ -125,9 +125,9 @@ export class Hud {
             Object.assign(t.style, {
                 font: arialFont(24, true),
                 color: 'rgb(255, 192, 55)',
-                textShadow: '1px 1px 0 #000',
+                textShadow: `${guiPx(1)} ${guiPx(1)} 0 #000`,
                 whiteSpace: 'pre',
-                lineHeight: '24px',
+                lineHeight: guiPx(24),
             });
         }
 
@@ -135,13 +135,13 @@ export class Hud {
         speedo.style.background = `url(${ui('speedometer2.png')}) center / 100% 100%`;
         Object.assign(this._needle.style, {
             position: 'absolute',
-            left: `${SPEEDO.centerX}px`,
-            top: `${SPEEDO.centerY - SPEEDO.width}px`,
-            width: `${SPEEDO.length}px`,
-            height: `${SPEEDO.width * 2}px`,
+            left: guiPx(SPEEDO.centerX),
+            top: guiPx(SPEEDO.centerY - SPEEDO.width),
+            width: guiPx(SPEEDO.length),
+            height: guiPx(SPEEDO.width * 2),
             boxSizing: 'border-box',
-            border: '1px solid rgb(255, 77, 77)',
-            transformOrigin: `0 ${SPEEDO.width}px`,
+            border: `${guiPx(1)} solid rgb(255, 77, 77)`,
+            transformOrigin: `0 ${guiPx(SPEEDO.width)}`,
         });
         speedo.append(this._needle);
 
@@ -174,8 +174,10 @@ export class Hud {
      * Lays the controls out for a screen of `width` x `height` pixels.
      */
     resize(width: number, height: number): void {
-        for (const [key, el] of this._parts) placeControl(el, RECTS[key], width, height);
-        this.chat.resize(width);
+        const scale = hudScale(height);
+        this.element.style.setProperty('--gui-scale', String(scale));
+        for (const [key, el] of this._parts) placeControl(el, scaleAnchoredRect(RECTS[key], scale), width, height);
+        this.chat.resize(width, scale);
     }
 
     /**

@@ -1,4 +1,4 @@
-import { arialFont } from '../GuiControls';
+import { arialFont, guiPx } from '../GuiControls';
 import { MenuScreen, rel640 } from './MenuScreen';
 
 const ORANGE = 'rgb(255, 162, 0)';
@@ -30,7 +30,7 @@ export class AboutPage extends MenuScreen {
             `${b('This game powered by the Torque Game Engine.')} ${link('www.garagegames.com', 'GarageGames.com')}`,
         );
         const row = (key: string, action: string) =>
-            `<div style="display:flex"><span style="width:105px">${key}</span><span>${action}</span></div>`;
+            `<div style="display:flex"><span style="width:${guiPx(105)}">${key}</span><span>${action}</span></div>`;
         html(
             rel640(348, 44, 246, 291),
             `${b('Default Control', 20)}<br><br>${b('Movement')}` +

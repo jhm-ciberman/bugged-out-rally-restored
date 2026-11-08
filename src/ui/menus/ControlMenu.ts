@@ -1,5 +1,5 @@
 import { ACTIONS, type Action, bind, bindingOf, inputName } from '../../input/KeyBindings';
-import { ABOUT_TEXT, arialFont, MEDIUM_TEXT } from '../GuiControls';
+import { ABOUT_TEXT, arialFont, guiPx, MEDIUM_TEXT } from '../GuiControls';
 import { MenuScreen, rel, rel640 } from './MenuScreen';
 
 /** `GuiTextListProfile`: Arial 14, black. */
@@ -31,10 +31,10 @@ export class ControlMenu extends MenuScreen {
         });
         for (const { action, name } of ACTIONS) {
             const row = document.createElement('div');
-            Object.assign(row.style, { ...LIST_TEXT, display: 'flex', lineHeight: '18px', cursor: 'default' });
+            Object.assign(row.style, { ...LIST_TEXT, display: 'flex', lineHeight: guiPx(18), cursor: 'default' });
             const label = document.createElement('span');
             label.textContent = name;
-            label.style.flex = `0 0 ${BINDING_COLUMN}px`;
+            label.style.flex = `0 0 ${guiPx(BINDING_COLUMN)}`;
             row.append(label, document.createElement('span'));
             row.addEventListener('mousedown', () => this._select(action));
             row.addEventListener('dblclick', () => this._remap(action, name));
