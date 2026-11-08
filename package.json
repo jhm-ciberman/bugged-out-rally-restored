@@ -19,6 +19,6 @@
     },
     "dependencies": {
         "three": "^0.187.0",
-        "three-mesh-bvh": "^0.9.17"
+        "three-mesh-bvh": "^0.9.18"
     }
 }
